@@ -109,6 +109,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+DEFAULT_PERMISSON_CLASSES = [
+    'rest_framework.permissions.IsAuthenticated',
+    'rest_framework.permissions.IsAdminUser',
+    'rest_framework.permissions.AllowAny'
+]
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
