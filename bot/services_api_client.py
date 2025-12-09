@@ -141,12 +141,11 @@ class ApiClient:
     async def status_stats(self) -> Any:
         return await self._request("GET", "/markers/status-stats/")
 
-    async def take_problem(self, user_id: int, problem_id: int) -> Dict[str, Any]:
-        # Как в frontend: PATCH с JSON payload
+    async def take_problem(self, telegram_id: int, problem_id: int) -> Dict[str, Any]:
         return await self._request(
-            "PATCH",
-            f"/markers/{problem_id}/",
-            json={"status": "in_progress"},
+            "POST",
+            f"/pollutions/{problem_id}/assign/",
+            json={"telegram_id": telegram_id},
         )
 
     async def list_problems(self, page: int = 1, page_size: int = 5) -> Dict[str, Any]:

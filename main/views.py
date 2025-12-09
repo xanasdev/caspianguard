@@ -84,3 +84,16 @@ class PollutionDetailView(generics.RetrieveAPIView):
     queryset = Pollutions.objects.all()
     serializer_class = PollutionSerializer
     permission_classes = [permissions.AllowAny]
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AssignPollutionView(APIView):
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [CanAssignPollution]
+
+    def post(self, request, pk):
+        try:
+            pollution = Pollutions.objects.get(pk=pk)
+            pollution.assigned_to.add(request.user)
+            return Response({'success': 'Вы взяли проблему в работу'}, status=status.HTTP_200_OK)
+        except Pollutions.DoesNotExist:
+            return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)

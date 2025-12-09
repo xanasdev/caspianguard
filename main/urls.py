@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView, LinkTelegramView, PollutionListCreateView, PollutionTypeListView, PollutionDetailView
+from .views import RegisterView, LinkTelegramView, PollutionListCreateView, PollutionTypeListView, PollutionDetailView, AssignPollutionView
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
@@ -9,5 +9,6 @@ urlpatterns = [
     path('auth/link-telegram/', LinkTelegramView.as_view(), name='link_telegram'),
     path('pollutions/', PollutionListCreateView.as_view(), name='pollution_list_create'),
     path('pollutions/<int:pk>/', PollutionDetailView.as_view(), name='pollution_detail'),
+    path('pollutions/<int:pk>/assign/', AssignPollutionView.as_view(), name='pollution_assign'),
     path('pollution-types/', PollutionTypeListView.as_view(), name='pollution_type_list'),
 ]

@@ -37,6 +37,33 @@ api_client = ApiClient()
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
+    
+    # Проверяем есть ли deep link аргумент
+    args = message.text.split(maxsplit=1)
+    if len(args) > 1 and args[1].startswith('pollution_'):
+        pollution_id = args[1].replace('pollution_', '')
+        try:
+            pollution_id = int(pollution_id)
+            await api_client.take_problem(message.from_user.id, pollution_id)
+            await message.answer(
+                f"✅ Вы успешно взяли в работу проблему #{pollution_id}. Спасибо за помощь!",
+                reply_markup=main_menu_kb()
+            )
+            return
+        except aiohttp.ClientResponseError as e:
+            if e.status == 401:
+                await message.answer("⚠️ Необходимо авторизоваться. Используйте '🔗 Привязать аккаунт' для привязки аккаунта.", reply_markup=main_menu_kb())
+            elif e.status == 403:
+                error_data = getattr(e, 'error_data', {})
+                error_msg = error_data.get('detail', 'У вас нет прав для взятия проблемы в работу.')
+                await message.answer(f"⚠️ {error_msg}", reply_markup=main_menu_kb())
+            else:
+                await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
+            return
+        except Exception as e:
+            logger.exception("Ошибка при взятии проблемы: %s", e)
+            await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
+            return
 
     text = (
         "👋 <b>Каспийский страж</b> на связи!\n\n"
@@ -269,6 +296,16 @@ async def cb_ann_take(callback: CallbackQuery) -> None:
         await callback.message.answer(
             f"✅ Вы взяли в работу объявление #{problem_id}. Спасибо за помощь!",
         )
+    except aiohttp.ClientResponseError as e:
+        if e.status == 401:
+            await callback.message.answer("⚠️ Необходимо авторизоваться. Используйте '🔗 Привязать аккаунт' для привязки аккаунта.")
+        elif e.status == 403:
+            error_data = getattr(e, 'error_data', {})
+            error_msg = error_data.get('detail', 'У вас нет прав для взятия проблемы в работу.')
+            await callback.message.answer(f"⚠️ {error_msg}")
+        else:
+            logger.exception("Ошибка API при взятии проблемы: %s", e)
+            await callback.message.answer("⚠️ Не удалось обновить статус объявления. Попробуйте позже.")
     except Exception as e:
         logger.exception("Ошибка при взятии проблемы в работу: %s", e)
         await callback.message.answer("⚠️ Не удалось обновить статус объявления. Попробуйте позже.")

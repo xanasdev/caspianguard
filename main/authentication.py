@@ -16,4 +16,4 @@ class TelegramAuthentication(BaseAuthentication):
             user = User.objects.get(telegram_id=telegram_id)
             return (user, None)
         except User.DoesNotExist:
-            raise AuthenticationFailed('Пользователь с таким Telegram ID не найден')
+            raise AuthenticationFailed('Необходимо авторизоваться. Используйте "🔗 Привязать аккаунт" для привязки аккаунта.')

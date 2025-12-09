@@ -57,6 +57,7 @@ class Pollutions(models.Model):
     is_approved = models.BooleanField(default=False, verbose_name='Одобрено')
     images = models.ForeignKey(PollutionImage, related_name='pollutions', verbose_name='Изображения', on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20, verbose_name='Номер телефона автора', null=True, blank=True)
+    assigned_to = models.ManyToManyField(User, related_name='assigned_pollutions', verbose_name='Взято в работу', blank=True)
 
     class Meta:
         verbose_name = 'Сообщение о загрязнении'
