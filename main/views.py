@@ -34,6 +34,7 @@ class RegisterView(generics.CreateAPIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LinkTelegramView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
