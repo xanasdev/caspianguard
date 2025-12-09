@@ -53,7 +53,7 @@ class Pollutions(models.Model):
     description = models.TextField(verbose_name='Описание')
     pollution_type = models.ForeignKey(PollutionType, on_delete=models.PROTECT, related_name='pollutions', verbose_name='Тип загрязнения')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата и время создания')
-    reported_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reported_pollutions', verbose_name='Автор сообщения')
+    reported_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reported_pollutions', verbose_name='Автор сообщения', null=True, blank=True)
     is_approved = models.BooleanField(default=False, verbose_name='Одобрено')
     images = models.ForeignKey(PollutionImage, related_name='pollutions', verbose_name='Изображения', on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20, verbose_name='Номер телефона автора', null=True, blank=True)

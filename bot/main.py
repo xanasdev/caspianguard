@@ -34,21 +34,39 @@ dp = Dispatcher()
 api_client = ApiClient()
 
 
+
+
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     
     # Проверяем есть ли deep link аргумент
     args = message.text.split(maxsplit=1)
-    if len(args) > 1 and args[1].startswith('pollution_'):
-        pollution_id = args[1].replace('pollution_', '')
+    if len(args) > 1 and args[1].startswith('take_'):
+        pollution_id = args[1].replace('take_', '')
         try:
             pollution_id = int(pollution_id)
+            problem = await api_client.get_pollution_detail(pollution_id)
             await api_client.take_problem(message.from_user.id, pollution_id)
+            
+            pollution_type = problem.get('pollution_type', 'Неизвестно')
+            latitude = problem.get('latitude', 0)
+            longitude = problem.get('longitude', 0)
+            
             await message.answer(
-                f"✅ Вы успешно взяли в работу проблему #{pollution_id}. Спасибо за помощь!",
+                f"✅ Вы успешно взяли в работу проблему #{pollution_id} - {pollution_type}. Спасибо за помощь!",
                 reply_markup=main_menu_kb()
             )
+            
+            if latitude and longitude:
+                try:
+                    await message.answer_location(
+                        latitude=float(latitude),
+                        longitude=float(longitude)
+                    )
+                except Exception as loc_error:
+                    logger.warning(f"Ошибка отправки геолокации: {loc_error}")
             return
         except aiohttp.ClientResponseError as e:
             if e.status == 401:
@@ -59,12 +77,11 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                 await message.answer(f"⚠️ {error_msg}", reply_markup=main_menu_kb())
             else:
                 await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
-            return
         except Exception as e:
             logger.exception("Ошибка при взятии проблемы: %s", e)
             await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
             return
-
+    
     text = (
         "👋 <b>Каспийский страж</b> на связи!\n\n"
         "С помощью этого бота вы можете сообщить о загрязнении побережья Каспийского моря, "
@@ -73,6 +90,36 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     )
     await message.answer(text, reply_markup=main_menu_kb())
 
+
+@dp.message(F.web_app_data)
+async def handle_web_app_data(message: Message) -> None:
+    import json
+    try:
+        logger.info(f"Received web_app_data: {message.web_app_data.data}")
+        data = json.loads(message.web_app_data.data)
+        logger.info(f"Parsed data: {data}")
+        
+        if data.get('action') == 'take_pollution':
+            pollution_id = data.get('pollution_id')
+            logger.info(f"Taking pollution {pollution_id} for user {message.from_user.id}")
+            
+            problem = await api_client.get_pollution_detail(pollution_id)
+            await api_client.take_problem(message.from_user.id, pollution_id)
+            
+            pollution_type = problem.get('pollution_type', 'Неизвестно')
+            latitude = problem.get('latitude', 0)
+            longitude = problem.get('longitude', 0)
+            
+            await message.answer(
+                f"✅ Вы успешно взяли в работу проблему #{pollution_id} - {pollution_type}. Спасибо за помощь!",
+                reply_markup=main_menu_kb()
+            )
+            
+            if latitude and longitude:
+                await message.answer_location(latitude=float(latitude), longitude=float(longitude))
+    except Exception as e:
+        logger.exception("Ошибка обработки Web App данных: %s", e)
+        await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
 
 @dp.message(F.text == "❌ Отмена")
 async def cancel(message: Message, state: FSMContext) -> None:
@@ -373,6 +420,21 @@ async def link_account_finish(message: Message, state: FSMContext) -> None:
 
 
 async def on_startup() -> None:
+    from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
+    
+    # Устанавливаем команды бота
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Главное меню"),
+    ])
+    
+    # Устанавливаем кнопку меню с Web App
+    await bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="Открыть карту",
+            web_app=WebAppInfo(url="https://caspianguard.vercel.app")
+        )
+    )
+    
     if webhook_config.use_webhook:
         if not webhook_config.webhook_url:
             raise RuntimeError("WEBHOOK_URL не задан, но USE_WEBHOOK=true")
@@ -385,6 +447,7 @@ async def on_shutdown() -> None:
 
 
 async def run_polling() -> None:
+    await on_startup()
     await dp.start_polling(bot)
 
 

@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py create_superuser && python manage.py position_faking && python manage.py types_faking && gunicorn caspianguard.wsgi --bind 0.0.0.0:${PORT:-8080}",
+    "startCommand": "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py create_superuser && python manage.py position_faking && python manage.py types_faking && python manage.py pollutions_faking && gunicorn caspianguard.wsgi --bind 0.0.0.0:${PORT:-8080}",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

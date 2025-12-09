@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from services_api_client import ApiClient
 
 def main_menu_kb() -> ReplyKeyboardMarkup:
@@ -13,7 +13,7 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
                 KeyboardButton(text="📞 Связь с администрацией"),
             ],
             [
-                KeyboardButton(text="🔗 Привязать аккаунт")
+                KeyboardButton(text="🔗 Привязать аккаунт"),
             ]
         ],
         resize_keyboard=True,

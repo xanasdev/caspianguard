@@ -1,11 +1,12 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from main.models import Pollutions, PollutionType, PollutionImage
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from datetime import datetime, timedelta
 import random
+from faker import Faker
 
 User = get_user_model()
 
@@ -14,88 +15,86 @@ class Command(BaseCommand):
     help = 'Создает тестовые данные загрязнений'
 
     def handle(self, *args, **kwargs):
-        # Получаем или создаем тестового пользователя
-        test_user, created = User.objects.get_or_create(
-            username='test_user',
-            defaults={
-                'first_name': 'Тестовый',
-                'last_name': 'Пользователь',
-                'telegram_id': 123456789,
-                'is_active': True
-            }
-        )
-        if created:
-            test_user.set_password('test123')
-            test_user.save()
-            self.stdout.write(self.style.SUCCESS('Создан тестовый пользователь'))
-
         # Получаем типы загрязнений
         pollution_types = list(PollutionType.objects.all())
         if not pollution_types:
             self.stdout.write(self.style.ERROR('Сначала создайте типы загрязнений: python manage.py types_faking'))
             return
 
-        # Координаты вокруг Каспийского моря
+        # Координаты вокруг Махачкалы и городского пляжа
         locations = [
-            (43.123456, 51.654321, "Актау, Казахстан"),
-            (42.856789, 47.123456, "Махачкала, Россия"),
-            (40.345678, 50.987654, "Баку, Азербайджан"),
-            (36.789012, 53.456789, "Энзели, Иран"),
-            (41.234567, 52.345678, "Туркменбаши, Туркменистан"),
-            (43.567890, 51.234567, "Форт-Шевченко, Казахстан"),
-            (42.123456, 48.567890, "Дербент, Россия"),
-            (40.567890, 50.123456, "Сумгаит, Азербайджан"),
-            (37.123456, 54.234567, "Рамсар, Иран"),
-            (41.567890, 52.789012, "Балканабат, Туркменистан"),
-            (43.234567, 51.567890, "Жанаозен, Казахстан"),
-            (42.567890, 47.789012, "Каспийск, Россия"),
-            (40.789012, 50.567890, "Гянджа, Азербайджан"),
+            (42.9849, 47.5047, "Городской пляж Махачкалы"),
+            (42.9812, 47.5123, "Набережная Махачкалы"),
+            (42.9876, 47.5089, "Пляж у Каспийска"),
+            (42.9923, 47.5156, "Северный пляж"),
+            (42.9789, 47.4998, "Южный пляж"),
+            (42.9834, 47.5067, "Центральный пляж"),
+            (42.9901, 47.5134, "Пляж Турали"),
+            (42.9756, 47.4956, "Пляж Манас"),
+            (42.9867, 47.5101, "Пляж Каспий"),
+            (42.9945, 47.5178, "Пляж Дагестан"),
+            (42.9723, 47.4923, "Пляж Шамхал"),
+            (42.9889, 47.5112, "Пляж Ленинкент"),
+            (42.9801, 47.5034, "Пляж Альбатрос"),
         ]
 
-        descriptions = [
-            "Обнаружено большое скопление пластикового мусора на берегу",
-            "Нефтяное пятно в прибрежной зоне",
-            "Химические отходы в воде",
-            "Мертвая рыба на побережье",
-            "Стеклянные бутылки и другой мусор",
-            "Загрязнение воды неизвестным веществом",
-            "Большое количество выброшенного мусора",
-            "Пятно нефтепродуктов на поверхности воды",
-            "Химический запах в прибрежной зоне",
-            "Пластиковые отходы в большом количестве",
-            "Загрязнение прибрежной полосы",
-            "Подозрительное вещество в воде",
-            "Мусор на пляже требует уборки",
+        fake = Faker('ru_RU')
+        
+        pollution_templates = [
+            "Обнаружено {}",
+            "{} на пляже",
+            "Загрязнение: {}",
+            "Требуется уборка: {}",
+        ]
+        
+        pollution_objects = [
+            "пластиковые бутылки",
+            "нефтяное пятно",
+            "бытовой мусор",
+            "строительные отходы",
+            "пластиковые пакеты",
+            "стеклянные осколки",
+            "химические отходы",
+            "металлический лом",
         ]
 
         created_count = 0
+        colors = [(70, 130, 180), (100, 150, 200), (50, 100, 150), (80, 120, 160)]
         
         for i, (lat, lon, location_name) in enumerate(locations):
-            # Создаем простое изображение
-            img = Image.new('RGB', (800, 600), color=(70, 130, 180))
+            # Создаем изображение с текстом
+            img = Image.new('RGB', (800, 600), color=random.choice(colors))
+            draw = ImageDraw.Draw(img)
+            try:
+                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 40)
+            except:
+                font = ImageFont.load_default()
+            draw.text((50, 250), f"{location_name}", fill=(255, 255, 255), font=font)
+            
             img_io = io.BytesIO()
             img.save(img_io, format='JPEG')
             img_io.seek(0)
             
             image_file = InMemoryUploadedFile(
-                img_io, None, f'test_image_{i}.jpg', 'image/jpeg', img_io.getbuffer().nbytes, None
+                img_io, None, f'pollution_{i}.jpg', 'image/jpeg', img_io.getbuffer().nbytes, None
             )
             
-            # Создаем PollutionImage
             pollution_image = PollutionImage.objects.create(image=image_file)
-            
-            # Выбираем случайный тип загрязнения
             pollution_type = random.choice(pollution_types)
             
-            # Создаем запись загрязнения
+            # Генерируем описание
+            template = random.choice(pollution_templates)
+            obj = random.choice(pollution_objects)
+            description = template.format(obj)
+            
             pollution = Pollutions.objects.create(
                 latitude=lat,
                 longitude=lon,
-                description=descriptions[i],
+                description=description,
                 pollution_type=pollution_type,
-                reported_by=test_user,
+                reported_by=None,
                 images=pollution_image,
-                phone_number=f"+7{random.randint(7000000000, 7999999999)}" if i % 2 == 0 else None,
+                phone_number=fake.phone_number() if random.choice([True, False]) else None,
                 is_approved=random.choice([True, False]),
                 created_at=datetime.now() - timedelta(days=random.randint(0, 30))
             )
