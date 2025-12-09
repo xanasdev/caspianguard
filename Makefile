@@ -1,4 +1,4 @@
-.PHONY: help install-backend install-bot run-backend run-bot clean-backend clean-bot install run clean migrate-backend createsuperuser db-up db-down db-restart db-logs db-reset
+.PHONY: help install-backend install-bot run-backend run-bot clean-backend clean-bot install run clean migrate-backend createsuperuser fake-pollutions db-up db-down db-restart db-logs db-reset
 
 # Определение Python команды и путей (поддержка разных систем)
 PYTHON := python3
@@ -24,6 +24,7 @@ help: ## Показать справку по командам
 	@echo "  make install          - Установить оба окружения"
 	@echo "  make migrate-backend  - Выполнить миграции базы данных (требует запущенной БД)"
 	@echo "  make createsuperuser  - Создать суперпользователя Django (для доступа к админке)"
+	@echo "  make fake-pollutions  - Создать тестовые данные загрязнений (13 записей)"
 	@echo "  make run-backend      - Запустить Django сервер"
 	@echo "  make run-bot          - Запустить Telegram бота"
 	@echo "  make clean-backend    - Удалить виртуальное окружение бекенда"
@@ -81,6 +82,15 @@ else
 endif
 	@echo "Создание суперпользователя..."
 	@$(VENV_BACKEND)/$(VENV_BIN)/python manage.py createsuperuser
+
+fake-pollutions: ## Создать тестовые данные загрязнений
+ifeq ($(OS),Windows_NT)
+	@if not exist "$(VENV_BACKEND)" (echo "Виртуальное окружение не найдено. Запустите: make install-backend" && exit /b 1)
+else
+	@test -d "$(VENV_BACKEND)" || (echo "Виртуальное окружение не найдено. Запустите: make install-backend" && exit 1)
+endif
+	@echo "Создание тестовых данных загрязнений..."
+	@$(VENV_BACKEND)/$(VENV_BIN)/python manage.py pollutions_faking
 
 run-backend: ## Запустить Django сервер
 ifeq ($(OS),Windows_NT)

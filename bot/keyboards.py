@@ -52,6 +52,34 @@ def location_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
+def announcements_list_kb(problems: list, page: int, has_next: bool) -> InlineKeyboardMarkup:
+    """Создать inline клавиатуру со списком объявлений"""
+    buttons = []
+    
+    # Кнопки для каждого объявления
+    for problem in problems:
+        problem_id = problem.get('id')
+        pollution_type = problem.get('pollution_type', 'Неизвестно')
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"📌 #{problem_id} - {pollution_type}",
+                callback_data=f"ann_view:{problem_id}"
+            )
+        ])
+    
+    # Кнопки пагинации
+    nav_buttons = []
+    if page > 1:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"ann_page:{page-1}"))
+    if has_next:
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Далее", callback_data=f"ann_page:{page+1}"))
+    
+    if nav_buttons:
+        buttons.append(nav_buttons)
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def announcements_pagination_kb(page: int, has_next: bool) -> InlineKeyboardMarkup:
     buttons = []
     if page > 1:

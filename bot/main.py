@@ -146,32 +146,22 @@ async def list_announcements(message: Message) -> None:
 async def send_announcements_page(chat_id: int, page: int) -> None:
     try:
         response = await api_client.list_problems(page=page, page_size=5)
-        problems = response.get('items', []) if isinstance(response, dict) else response
+        
+        # Бекенд возвращает {"count": X, "next": "...", "previous": "...", "results": [...]}
+        problems = response.get('results', [])
+        has_next = bool(response.get('next'))
         
         if not problems:
             await bot.send_message(chat_id, "⚠️ Нет объявлений на этой странице.")
             return
-
-        for problem in problems:
-            text = (
-                f"📌 <b>Объявление #{problem['id']}</b>\n\n"
-                f"📍 <b>Тип:</b> {problem['pollution_type']}\n"
-                f"📝 <b>Описание:</b> {problem['description']}\n"
-                f"📞 <b>Телефон:</b> {problem.get('phone_number') or '—'}\n"
-                f"📍 <b>Координаты:</b> {problem['latitude']}, {problem['longitude']}"
-            )
-            
-            if problem.get('image_url'):
-                await bot.send_photo(
-                    chat_id, 
-                    photo=problem['image_url'], 
-                    caption=text,
-                    reply_markup=announcement_actions_kb(problem["id"])
-                )
-            else:
-                await bot.send_message(chat_id, text, reply_markup=announcement_actions_kb(problem["id"]))
-            
-            await bot.send_location(chat_id, latitude=problem['latitude'], longitude=problem['longitude'])
+        
+        text = "📋 <b>Список объявлений</b>\n\nВыберите объявление для просмотра деталей:"
+        
+        await bot.send_message(
+            chat_id,
+            text,
+            reply_markup=announcements_list_kb(problems, page, has_next)
+        )
     except Exception as e:
         logger.exception("Ошибка при получении списка объявлений: %s", e)
         await bot.send_message(chat_id, "⚠️ Произошла ошибка при получении списка объявлений. Попробуйте позже.")
@@ -182,7 +172,91 @@ async def cb_ann_page(callback: CallbackQuery) -> None:
     await callback.answer()
     _, page_str = callback.data.split(":", 1)
     page = int(page_str)
+    # Удаляем старое сообщение и отправляем новое
+    await callback.message.delete()
     await send_announcements_page(callback.message.chat.id, page=page)
+
+@dp.callback_query(F.data.startswith("ann_view:"))
+async def cb_ann_view(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, id_str = callback.data.split(":", 1)
+    pollution_id = int(id_str)
+    
+    try:
+        problem = await api_client.get_pollution_detail(pollution_id)
+        logger.info(f"Получены детали объявления #{pollution_id}: {problem}")
+        
+        if not problem:
+            await callback.message.answer("⚠️ Объявление не найдено.")
+            return
+        
+        # Форматируем дату
+        created_at = problem.get('created_at', '')
+        if created_at:
+            try:
+                from datetime import datetime
+                # Обрабатываем разные форматы даты
+                if 'T' in created_at:
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                else:
+                    dt = datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S')
+                created_at = dt.strftime('%d.%m.%Y %H:%M')
+            except Exception as date_error:
+                logger.warning(f"Ошибка форматирования даты: {date_error}, исходная дата: {created_at}")
+                created_at = str(created_at)[:16]  # Берем первые 16 символов
+        
+        # Получаем значения с безопасными fallback
+        pollution_type = problem.get('pollution_type', 'Неизвестно')
+        description = problem.get('description', '—') or '—'
+        phone = problem.get('phone_number') or '—'
+        latitude = problem.get('latitude', 0)
+        longitude = problem.get('longitude', 0)
+        
+        text = (
+            f"📌 <b>Объявление #{problem.get('id', '?')}</b>\n\n"
+            f"📍 <b>Тип:</b> {pollution_type}\n"
+            f"📝 <b>Описание:</b> {description}\n"
+            f"📞 <b>Телефон:</b> {phone}\n"
+            f"📍 <b>Координаты:</b> {latitude}, {longitude}\n"
+            f"📅 <b>Дата:</b> {created_at or '—'}\n"
+            f"✅ <b>Одобрено:</b> {'Да' if problem.get('is_approved') else 'Нет'}"
+        )
+        
+        # Отправляем фото если есть
+        image_url = problem.get('image_url')
+        if image_url:
+            try:
+                await callback.message.answer_photo(
+                    photo=image_url,
+                    caption=text,
+                    reply_markup=announcement_actions_kb(problem.get('id', pollution_id))
+                )
+            except Exception as photo_error:
+                logger.warning(f"Ошибка отправки фото: {photo_error}")
+                await callback.message.answer(text, reply_markup=announcement_actions_kb(problem.get('id', pollution_id)))
+        else:
+            await callback.message.answer(text, reply_markup=announcement_actions_kb(problem.get('id', pollution_id)))
+        
+        # Отправляем геолокацию если координаты валидны
+        if latitude and longitude:
+            try:
+                await callback.message.answer_location(
+                    latitude=float(latitude),
+                    longitude=float(longitude)
+                )
+            except Exception as loc_error:
+                logger.warning(f"Ошибка отправки геолокации: {loc_error}")
+        
+    except aiohttp.ClientResponseError as e:
+        error_data = getattr(e, 'error_data', {})
+        if e.status == 404:
+            await callback.message.answer("⚠️ Объявление не найдено.")
+        else:
+            logger.exception("Ошибка API при получении деталей: %s", e)
+            await callback.message.answer(f"⚠️ Ошибка при загрузке объявления. Код: {e.status}")
+    except Exception as e:
+        logger.exception("Ошибка при получении деталей объявления: %s", e)
+        await callback.message.answer("⚠️ Не удалось загрузить детали объявления. Попробуйте позже.")
 
 
 @dp.callback_query(F.data.startswith("ann_take:"))

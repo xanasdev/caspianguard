@@ -95,11 +95,9 @@ class ApiClient:
         return await self._request("GET", "/auth/profile/")
 
     async def list_markers(self, page: int = 1, page_size: int = 5) -> Any:
-        # Как в frontend: передаем query params через params, а не в URL
-        params = {"page": page, "page_size": page_size} if page or page_size else {}
-        raw = await self._request("GET", "/pollutions/")
-
-        return raw["results"]
+        params = {"page": page, "page_size": page_size}
+        raw = await self._request("GET", "/pollutions/", params=params)
+        return raw  # Возвращаем весь объект с пагинацией
 
 
     async def create_problem(
@@ -155,5 +153,9 @@ class ApiClient:
 
     async def list_problems(self, page: int = 1, page_size: int = 5) -> Dict[str, Any]:
         return await self.list_markers(page=page, page_size=page_size)
+
+    async def get_pollution_detail(self, pollution_id: int) -> Dict[str, Any]:
+        """Получить детальную информацию об одном загрязнении"""
+        return await self._request("GET", f"/pollutions/{pollution_id}/")
 
 

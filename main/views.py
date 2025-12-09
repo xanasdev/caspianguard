@@ -78,3 +78,9 @@ class PollutionTypeListView(generics.ListAPIView):
     queryset = PollutionType.objects.all().order_by('name')
     serializer_class = PollutionTypeSerializer
     permission_classes = [permissions.AllowAny]
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PollutionDetailView(generics.RetrieveAPIView):
+    queryset = Pollutions.objects.all()
+    serializer_class = PollutionSerializer
+    permission_classes = [permissions.AllowAny]
