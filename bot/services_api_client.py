@@ -87,8 +87,6 @@ class ApiClient:
 
         req = await self._request("POST", "/auth/link-telegram/", json=payload)
 
-        print(req)
-
         return req
 
     async def get_user_info(self) -> Dict[str, Any]:
