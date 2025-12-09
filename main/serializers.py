@@ -11,6 +11,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name', 'last_name', 'telegram_id']
         read_only_fields = ['id']
 
+class PollutionTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PollutionType
+        fields = ['id', 'name']
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

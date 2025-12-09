@@ -7,8 +7,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from .serializers import RegisterSerializer, PollutionSerializer
-from .models import Pollutions
+from .serializers import RegisterSerializer, PollutionSerializer, PollutionTypeSerializer
+from .models import Pollutions, PollutionType
 from .permissions import *
 from .authentication import TelegramAuthentication
 
@@ -72,3 +72,9 @@ class PollutionListCreateView(generics.ListCreateAPIView):
         if self.request.method == 'POST':
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PollutionTypeListView(generics.ListAPIView):
+    queryset = PollutionType.objects.all().order_by('name')
+    serializer_class = PollutionTypeSerializer
+    permission_classes = [permissions.AllowAny]

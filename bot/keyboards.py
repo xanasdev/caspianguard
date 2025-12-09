@@ -1,5 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-
+from services_api_client import ApiClient
 
 def main_menu_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
@@ -20,9 +20,14 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
     )
 
 
-def pollution_type() -> ReplyKeyboardMarkup:
-    problem_types = ["Нефтяное загрязнение", "Мусор"] # Будет API запрос на получение ~6 типов загрязнений
-
+async def pollution_type() -> ReplyKeyboardMarkup:
+    api_client = ApiClient()
+    try:
+        types = await api_client.get_pollution_types()
+        problem_types = [pt['name'] for pt in types]
+    except Exception:
+        problem_types = ["Нефтяное загрязнение", "Мусор"]  # Fallback
+    
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=type)] for type in problem_types],
         resize_keyboard=True,

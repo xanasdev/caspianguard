@@ -14,6 +14,7 @@ from aiogram.types import (
 )
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
+import aiohttp
 
 from config import bot_config, webhook_config
 from keyboards import *
@@ -63,7 +64,7 @@ async def report_photo(message: Message, state: FSMContext) -> None:
     photo = message.photo[-1]
     await state.update_data(photo_file_id=photo.file_id)
     await state.set_state(ReportProblemState.waiting_for_type)
-    await message.answer("🔎 Укажите тип проблемы", reply_markup=pollution_type())
+    await message.answer("🔎 Укажите тип проблемы", reply_markup=await pollution_type())
 
 
 @dp.message(ReportProblemState.waiting_for_photo)

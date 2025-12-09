@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse, urlunparse
 
 import aiohttp
 import uuid
@@ -19,7 +20,24 @@ class ApiClient:
         # например: http://localhost:8000
         # Добавляем /api в конец, как в frontend
         raw_base = (base_url or bot_config.api_base_url.rstrip("/"))
+        
+        # Автоматически добавляем протокол, если его нет
+        if raw_base and not raw_base.startswith(("http://", "https://")):
+            raw_base = f"http://{raw_base}"
+        
+        # Парсим URL для правильной обработки порта
+        parsed = urlparse(raw_base)
+        
+        # Если порт не указан и это localhost/127.0.0.1, добавляем порт 8000
+        if not parsed.port and parsed.hostname in ("localhost", "127.0.0.1"):
+            parsed = parsed._replace(netloc=f"{parsed.hostname}:8000")
+            raw_base = urlunparse(parsed)
+        
         self.base_url = f"{raw_base}/api"
+
+    async def get_pollution_types(self) -> list[Dict[str, Any]]:
+        """Получить список всех типов загрязнений"""
+        return await self._request("GET", "/pollution-types/")
 
     async def _request(
         self, 
@@ -31,7 +49,31 @@ class ApiClient:
         url = f"{self.base_url}/{path.lstrip('/')}"
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, json=json, params=params) as resp:
-                resp.raise_for_status()
+                if resp.status >= 400:
+                    # Получаем детали ошибки перед raise_for_status
+                    error_data = {}
+                    try:
+                        if resp.content_type and "application/json" in resp.content_type:
+                            error_data = await resp.json()
+                        else:
+                            error_text = await resp.text()
+                            error_data = {"error": error_text}
+                    except Exception as parse_error:
+                        error_data = {"error": f"HTTP {resp.status}", "parse_error": str(parse_error)}
+                    
+                    # Вызываем raise_for_status, но сначала сохраняем детали ошибки
+                    try:
+                        resp.raise_for_status()
+                    except aiohttp.ClientResponseError as e:
+                        # Добавляем детали ошибки к исключению
+                        e.error_data = error_data
+                        raise
+                
+                # Если статус OK, возвращаем данные
+                if resp.content_type and "application/json" in resp.content_type:
+                    return await resp.json()
+                return await resp.text()
+                
                 if resp.content_type and "application/json" in resp.content_type:
                     return await resp.json()
                 return await resp.text()
