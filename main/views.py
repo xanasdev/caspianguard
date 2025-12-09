@@ -5,12 +5,15 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .serializers import RegisterSerializer, PollutionSerializer
 from .models import Pollutions
 from .permissions import *
 from .authentication import TelegramAuthentication
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -29,6 +32,7 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LinkTelegramView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -57,6 +61,7 @@ class PollutionPagination(PageNumberPagination):
     max_page_size = 100
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PollutionListCreateView(generics.ListCreateAPIView):
     queryset = Pollutions.objects.all().order_by('-created_at')
     serializer_class = PollutionSerializer
