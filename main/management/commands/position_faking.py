@@ -3,12 +3,7 @@ from django.core.management.base import BaseCommand
 
 positions = ['Волонтер', 'Житель', 'Менеджер', 'Администратор']
 
-def get_permissions(position_name):
-    if position_name == "Волонтер":
-        pass
-
 class Command(BaseCommand):
-    help = 'Генерация фейковых заказов'
 
     def handle(self, *args, **kwargs):
         count = 0

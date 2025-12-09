@@ -69,3 +69,13 @@ def announcement_actions_kb(announcement_id: int) -> InlineKeyboardMarkup:
     )
 
 
+def send_number_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📞 Поделиться номером", request_contact=True)],
+            [KeyboardButton(text="➡️ Пропустить")],
+            [KeyboardButton(text="❌ Отмена")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )

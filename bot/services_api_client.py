@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 import aiohttp
+import uuid
 
 from config import bot_config
 
@@ -54,36 +55,40 @@ class ApiClient:
     async def list_markers(self, page: int = 1, page_size: int = 5) -> Any:
         # Как в frontend: передаем query params через params, а не в URL
         params = {"page": page, "page_size": page_size} if page or page_size else {}
-        raw = await self._request("GET", "/markers/", params=params)
+        raw = await self._request("GET", "/pollutions/")
 
-        # Нормализуем ответ под формат, удобный боту:
-        # - если backend вернул список (как в frontend), превращаем в dict с items + total
-        # - если вернул paginated dict (DRF pagination), вытаскиваем results/count
-        if isinstance(raw, list):
-            return {"items": raw, "total": len(raw)}
+        return raw["results"]
 
-        results = raw.get("results") or raw.get("items") or []
-        total = raw.get("count", raw.get("total", len(results)))
-        return {"items": results, "total": total}
 
     async def create_problem(
         self,
-        user_id: int,
-        photo_file_id: str,
-        problem_type: str,
-        description: str,
+        telegram_id: int,
+        photo_bytes: bytes,
         latitude: float,
         longitude: float,
+        pollution_type: str,
+        description: str,
         phone: str | None,
     ) -> Dict[str, Any]:
-        # Как в frontend: используем pollution_type_name (строка)
-        payload: Dict[str, Any] = {
-            "latitude": str(latitude),
-            "longitude": str(longitude),
-            "description": description,
-            "pollution_type_name": problem_type,
-        }
-        return await self._request("POST", "/markers/", json=payload)
+        url = f"{self.base_url}/pollutions/"
+        fake_uuid = uuid.uuid4()
+        
+        data = aiohttp.FormData()
+        data.add_field('telegram_id', str(telegram_id))
+        data.add_field('latitude', str(latitude))
+        data.add_field('longitude', str(longitude))
+        data.add_field('description', description)
+        data.add_field('pollution_type', pollution_type)
+        if phone:
+            data.add_field('phone_number', phone)
+        data.add_field('image', photo_bytes, filename=f'photo_{str(fake_uuid)}.jpg', content_type='image/jpeg')
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data) as resp:
+                resp.raise_for_status()
+                print(resp.status)
+                print(resp.json())
+                return await resp.json()
 
     async def get_marker_comments(self, marker_id: int) -> Any:
         return await self._request("GET", f"/markers/{marker_id}/comments/")

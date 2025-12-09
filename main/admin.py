@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Position
+from .models import User, Position, Pollutions, PollutionType, PollutionImage
 
 
 class UserAdmin(BaseUserAdmin):
@@ -14,3 +14,6 @@ class UserAdmin(BaseUserAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Position)
+admin.site.register(Pollutions)
+admin.site.register(PollutionType)
+admin.site.register(PollutionImage)

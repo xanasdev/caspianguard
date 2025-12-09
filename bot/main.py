@@ -92,7 +92,7 @@ async def report_location(message: Message, state: FSMContext) -> None:
     await state.set_state(ReportProblemState.waiting_for_phone)
     await message.answer(
         "📞 Если хотите, отправьте номер телефона (текстом или контакт‑карточкой).\n"
-        "Если не хотите оставлять номер — просто отправьте «Пропустить».",
+        "Если не хотите оставлять номер — просто отправьте «Пропустить».", reply_markup=send_number_kb()
     )
 
 
@@ -103,17 +103,26 @@ async def report_location_invalid(message: Message) -> None:
 
 @dp.message(ReportProblemState.waiting_for_phone)
 async def report_phone(message: Message, state: FSMContext) -> None:
-    phone_raw = message.text.strip()
-    phone = None if phone_raw.lower() == "пропустить" else phone_raw
+    # Проверяем контакт (карточку номера)
+    if message.contact:
+        phone = message.contact.phone_number
+    elif message.text:
+        phone_raw = message.text.strip()
+        phone = None if phone_raw.lower() == "пропустить" else phone_raw
+    else:
+        phone = None
 
     data = await state.get_data()
     await state.clear()
 
     try:
+        file = await bot.get_file(data["photo_file_id"])
+        photo_bytes = await bot.download_file(file.file_path)
+
         await api_client.create_problem(
-            user_id=message.from_user.id,
-            photo_file_id=data["photo_file_id"],
-            problem_type=data["problem_type"],
+            telegram_id=message.from_user.id,
+            photo_bytes=photo_bytes.read(),
+            pollution_type=data["problem_type"],
             description=data["description"],
             latitude=data["latitude"],
             longitude=data["longitude"],
@@ -135,62 +144,36 @@ async def list_announcements(message: Message) -> None:
 
 async def send_announcements_page(chat_id: int, page: int) -> None:
     try:
-        resp = await api_client.list_problems(page=page, page_size=5)
+        response = await api_client.list_problems(page=page, page_size=5)
+        problems = response.get('items', []) if isinstance(response, dict) else response
+        
+        if not problems:
+            await bot.send_message(chat_id, "⚠️ Нет объявлений на этой странице.")
+            return
+
+        for problem in problems:
+            text = (
+                f"📌 <b>Объявление #{problem['id']}</b>\n\n"
+                f"📍 <b>Тип:</b> {problem['pollution_type']}\n"
+                f"📝 <b>Описание:</b> {problem['description']}\n"
+                f"📞 <b>Телефон:</b> {problem.get('phone_number') or '—'}\n"
+                f"📍 <b>Координаты:</b> {problem['latitude']}, {problem['longitude']}"
+            )
+            
+            if problem.get('image_url'):
+                await bot.send_photo(
+                    chat_id, 
+                    photo=problem['image_url'], 
+                    caption=text,
+                    reply_markup=announcement_actions_kb(problem["id"])
+                )
+            else:
+                await bot.send_message(chat_id, text, reply_markup=announcement_actions_kb(problem["id"]))
+            
+            await bot.send_location(chat_id, latitude=problem['latitude'], longitude=problem['longitude'])
     except Exception as e:
-        logger.exception("Ошибка получения списка проблем: %s", e)
-        await bot.send_message(chat_id, "⚠️ Не удалось загрузить список объявлений. Попробуйте позже.")
-        return
-
-    items = resp.get("items") or resp.get("results") or []
-    total = resp.get("total", len(items))
-    has_next = page * 5 < total
-
-    if not items:
-        await bot.send_message(chat_id, "Сейчас нет активных объявлений.")
-        return
-
-    for item in items:
-        pollution_type = None
-        poll_data = item.get("pollution_type") or {}
-        if isinstance(poll_data, dict):
-            pollution_type = poll_data.get("name")
-
-        text = (
-            f"🆔 <b>ID:</b> {item.get('id')}\n"
-            f"📍 <b>Локация:</b> {item.get('latitude')}, {item.get('longitude')}\n"
-            f"⚠️ <b>Тип:</b> {pollution_type or '—'}\n"
-            f"📝 <b>Описание:</b> {item.get('description') or '—'}"
-        )
-
-        # Пытаемся показать первую фотографию из списка photos, если она есть.
-        photo_url: str | None = None
-        photos = item.get("photos") or []
-        if isinstance(photos, list) and photos:
-            first_photo = photos[0] or {}
-            img = first_photo.get("image")
-            if isinstance(img, str) and img:
-                # DRF обычно возвращает относительный путь вида /media/...
-                # Строим полный URL от api_base_url.
-                from config import bot_config as _cfg  # локальный импорт, чтобы избежать циклов
-
-                base = _cfg.api_base_url.rstrip("/")
-                if img.startswith("http://") or img.startswith("https://"):
-                    photo_url = img
-                else:
-                    photo_url = f"{base}/{img.lstrip('/')}"
-
-        reply_markup = announcement_actions_kb(item.get("id"))
-
-        if photo_url:
-            await bot.send_photo(chat_id, photo=photo_url, caption=text, reply_markup=reply_markup)
-        else:
-            await bot.send_message(chat_id, text, reply_markup=reply_markup)
-
-    await bot.send_message(
-        chat_id,
-        f"Страница {page}",
-        reply_markup=announcements_pagination_kb(page=page, has_next=has_next),
-    )
+        logger.exception("Ошибка при получении списка объявлений: %s", e)
+        await bot.send_message(chat_id, "⚠️ Произошла ошибка при получении списка объявлений. Попробуйте позже.")
 
 
 @dp.callback_query(F.data.startswith("ann_page:"))
