@@ -19,7 +19,7 @@ import aiohttp
 from config import bot_config, webhook_config
 from keyboards import *
 from services_api_client import ApiClient
-from states import ReportProblemState, AdminChatState, LinkTelegramState
+from states import ReportProblemState, AdminChatState, LinkTelegramState, AdminReplyState
 
 
 logging.basicConfig(level=logging.INFO)
@@ -372,11 +372,32 @@ async def contact_admin(message: Message, state: FSMContext) -> None:
 
 @dp.message(AdminChatState.waiting_for_message)
 async def admin_chat_message(message: Message, state: FSMContext) -> None:
-    await state.clear()
-    await message.answer(
-        "✅ Ваше сообщение отправлено администрации. Ожидайте ответа.",
-        reply_markup=main_menu_kb(),
-    )
+    try:
+        result = await api_client.send_admin_message(message.from_user.id, message.text)
+        
+        admin_ids = result.get('admin_telegram_ids', [])
+        message_id = result.get('message_id')
+        user_info = result.get('user_info', {})
+        
+        for admin_telegram_id in admin_ids:
+            try:
+                await bot.send_message(
+                    admin_telegram_id,
+                    f"📨 <b>Новое сообщение от пользователя</b>\n\n👤 <b>Пользователь:</b> {user_info.get('full_name')} (@{user_info.get('username')})\n\n💬 <b>Сообщение:</b>\n{message.text}",
+                    reply_markup=admin_reply_kb(message_id)
+                )
+            except Exception as send_error:
+                logger.error(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
+        
+        await state.clear()
+        await message.answer(
+            "✅ Ваше сообщение отправлено администрации. Ожидайте ответа.",
+            reply_markup=main_menu_kb(),
+        )
+    except Exception as e:
+        logger.exception("Ошибка при отправке сообщения админам: %s", e)
+        await state.clear()
+        await message.answer("⚠️ Ошибка отправки сообщения.", reply_markup=main_menu_kb())
 
 
 @dp.message(F.text == "🔗 Привязать аккаунт")
@@ -703,3 +724,54 @@ if __name__ == "__main__":
         asyncio.run(run_polling())
 
 
+
+# Состояние для ответа админа
+class AdminReplyState(StatesGroup):
+    waiting_for_reply = State()
+
+
+@dp.callback_query(F.data.startswith("admin_reply:"))
+async def cb_admin_reply(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    _, message_id_str = callback.data.split(":", 1)
+    message_id = int(message_id_str)
+    
+    await state.update_data(replying_to_message_id=message_id)
+    await state.set_state(AdminReplyState.waiting_for_reply)
+    await callback.message.answer(
+        "✏️ Напишите ответ пользователю:",
+        reply_markup=cancel_kb()
+    )
+
+
+@dp.message(AdminReplyState.waiting_for_reply)
+async def handle_admin_reply(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    message_id = data.get('replying_to_message_id')
+    
+    if not message_id:
+        await state.clear()
+        return
+    
+    try:
+        result = await api_client.reply_to_user(message_id, message.text)
+        
+        user_telegram_id = result.get('user_telegram_id')
+        user_name = result.get('user_name')
+        
+        if user_telegram_id:
+            try:
+                await bot.send_message(
+                    user_telegram_id,
+                    f"📨 <b>Ответ от администрации:</b>\n\n{message.text}"
+                )
+                await message.answer(f"✅ Ответ отправлен пользователю {user_name}")
+            except Exception as send_error:
+                logger.error(f"Ошибка отправки ответа пользователю: {send_error}")
+                await message.answer("⚠️ Ошибка отправки ответа пользователю.")
+        
+        await state.clear()
+    except Exception as e:
+        logger.exception("Ошибка при отправке ответа: %s", e)
+        await state.clear()
+        await message.answer("⚠️ Ошибка отправки ответа.")

@@ -17,3 +17,6 @@ class LinkTelegramState(StatesGroup):
     login = State()
     password = State()
 
+
+class AdminReplyState(StatesGroup):
+    waiting_for_reply = State()

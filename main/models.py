@@ -69,3 +69,18 @@ class Pollutions(models.Model):
 
     def __str__(self):
         return f'Загрязнение {self.pollution_type.name} на ({self.latitude}, {self.longitude})'
+
+
+class AdminMessage(models.Model):
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_admin_messages', verbose_name='От пользователя')
+    message = models.TextField(verbose_name='Сообщение')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    is_answered = models.BooleanField(default=False, verbose_name='Отвечено')
+    
+    class Meta:
+        verbose_name = 'Сообщение администрации'
+        verbose_name_plural = 'Сообщения администрации'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'Сообщение от {self.from_user.username}: {self.message[:50]}...'

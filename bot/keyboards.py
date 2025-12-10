@@ -175,3 +175,9 @@ def admin_review_kb(pollution_id: int, user_id: int) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+def admin_reply_kb(message_id: int) -> InlineKeyboardMarkup:
+    """Клавиатура для ответа админа на сообщение пользователя"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply:{message_id}")]
+    ])

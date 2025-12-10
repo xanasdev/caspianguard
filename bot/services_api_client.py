@@ -215,3 +215,16 @@ class ApiClient:
         return await self._request("POST", "/reject-completion/", json=payload)
 
 
+    async def send_admin_message(self, telegram_id: int, message: str) -> Dict[str, Any]:
+        """Отправить сообщение администрации"""
+        return await self._request("POST", "/send-admin-message/", json={
+            "telegram_id": telegram_id,
+            "message": message
+        })
+
+    async def reply_to_user(self, message_id: int, reply_message: str) -> Dict[str, Any]:
+        """Ответить пользователю"""
+        return await self._request("POST", "/reply-to-user/", json={
+            "message_id": message_id,
+            "reply_message": reply_message
+        })

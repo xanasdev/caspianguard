@@ -299,3 +299,93 @@ class RejectCompletionView(APIView):
             return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SendAdminMessageView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        telegram_id = request.data.get('telegram_id')
+        message = request.data.get('message')
+        
+        if not telegram_id or not message:
+            return Response({'error': 'Необходимо указать telegram_id и message'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from django.contrib.auth import get_user_model
+            from django.db import models
+            from .models import AdminMessage
+            User = get_user_model()
+            
+            user = User.objects.get(telegram_id=telegram_id)
+            
+            admin_message = AdminMessage.objects.create(
+                from_user=user,
+                message=message
+            )
+            
+            admin_users = User.objects.filter(
+                models.Q(is_superuser=True) |
+                models.Q(position__name='Админ')
+            ).exclude(telegram_id__isnull=True)
+            
+            admin_telegram_ids = [admin.telegram_id for admin in admin_users if admin.telegram_id]
+            
+            return Response({
+                'success': 'Сообщение отправлено',
+                'admin_telegram_ids': admin_telegram_ids,
+                'message_id': admin_message.id,
+                'user_info': {
+                    'username': user.username,
+                    'telegram_id': user.telegram_id,
+                    'full_name': f'{user.first_name} {user.last_name}'.strip() or user.username
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ReplyToUserView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        message_id = request.data.get('message_id')
+        reply_message = request.data.get('reply_message')
+        
+        if not message_id or not reply_message:
+            return Response({'error': 'Необходимо указать message_id и reply_message'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .models import AdminMessage
+            admin_message = AdminMessage.objects.get(id=message_id)
+            admin_message.is_answered = True
+            admin_message.save()
+            
+            return Response({
+                'success': 'Ответ отправлен',
+                'user_telegram_id': admin_message.from_user.telegram_id,
+                'user_name': admin_message.from_user.username
+            }, status=status.HTTP_200_OK)
+            
+        except AdminMessage.DoesNotExist:
+            return Response({'error': 'Сообщение не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CreateFakePollutionsView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        try:
+            from .management.commands.create_fake_pollutions import Command
+            command = Command()
+            command.handle()
+            return Response({'success': 'Фейковые загрязнения созданы'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
