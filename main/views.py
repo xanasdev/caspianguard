@@ -71,7 +71,25 @@ class LinkTelegramView(APIView):
 
         return Response({
             'success': 'Telegram аккаунт успешно привязан',
-            'message': '✅ Ваш аккаунт успешно привязан! Теперь вы можете пользоваться всеми функциями бота.'
+            'message': '✅ Ваш аккаунт успешно привязан! Теперь вы можете пользоваться всеми функциями бота.',
+            'telegram_id': int(telegram_id)
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SendRegistrationNotificationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        telegram_id = request.data.get('telegram_id')
+        
+        if not telegram_id:
+            return Response({'error': 'Необходимо указать telegram_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': 'Уведомление отправлено',
+            'telegram_id': telegram_id,
+            'message': '✅ Регистрация завершена! Ваш аккаунт успешно привязан к Telegram. Теперь вы можете пользоваться всеми функциями бота!'
         }, status=status.HTTP_200_OK)
 
 

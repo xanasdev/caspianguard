@@ -224,3 +224,9 @@ class ApiClient:
             "message_id": message_id,
             "reply_message": reply_message
         })
+
+    async def get_registration_notification(self, telegram_id: int) -> Dict[str, Any]:
+        """Получить уведомление о регистрации"""
+        return await self._request("POST", "/send-registration-notification/", json={
+            "telegram_id": telegram_id
+        })
