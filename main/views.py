@@ -164,16 +164,17 @@ class CompletePollutionView(APIView):
                 return Response({'error': 'Вы не брали эту проблему'}, status=status.HTTP_400_BAD_REQUEST)
             
             completion_photo = request.FILES.get('completion_photo')
-            if completion_photo:
-                pollution.completion_photo = completion_photo
+            if not completion_photo:
+                return Response({'error': 'Обязательно приложите фото завершенной работы'}, status=status.HTTP_400_BAD_REQUEST)
             
+            pollution.completion_photo = completion_photo
             pollution.is_completed = True
             pollution.completed_by = request.user
             pollution.save()
             
             return Response({
                 'success': 'Заявка на завершение отправлена',
-                'has_photo': bool(completion_photo),
+                'has_photo': True,
                 'pollution_id': pollution.id,
                 'user_id': request.user.id,
                 'username': request.user.username
@@ -203,7 +204,74 @@ class NotifyAdminsView(APIView):
         
         telegram_ids = [user.telegram_id for user in admin_users if user.telegram_id]
         
+        # Получаем фото завершения
+        completion_photo_url = None
+        if pollution_id:
+            try:
+                pollution = Pollutions.objects.get(id=pollution_id)
+                if pollution.completion_photo:
+                    completion_photo_url = pollution.completion_photo.url
+            except Pollutions.DoesNotExist:
+                pass
+        
         return Response({
             'admin_telegram_ids': telegram_ids,
-            'message': f"📝 Новая заявка на завершение!\n\n👤 Пользователь: {username}\n📌 Проблема: #{pollution_id}\n📷 Фото: {'Есть' if has_photo else 'Нет'}"
+            'message': f"📝 Новая заявка на завершение!\n\n👤 Пользователь: {username}\n📌 Проблема: #{pollution_id}",
+            'completion_photo_url': completion_photo_url,
+            'pollution_id': pollution_id,
+            'user_id': user_id
         }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApproveCompletionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        pollution_id = request.data.get('pollution_id')
+        user_id = request.data.get('user_id')
+        
+        try:
+            pollution = Pollutions.objects.get(id=pollution_id)
+            user = User.objects.get(id=user_id)
+            
+            # Увеличиваем счетчик завершенных работ
+            user.completed_count += 1
+            user.save()
+            
+            return Response({
+                'success': 'Работа одобрена',
+                'user_telegram_id': user.telegram_id,
+                'pollution_id': pollution_id,
+                'pollution_type': pollution.pollution_type.name
+            }, status=status.HTTP_200_OK)
+        except (Pollutions.DoesNotExist, User.DoesNotExist):
+            return Response({'error': 'Объект не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RejectCompletionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        pollution_id = request.data.get('pollution_id')
+        user_id = request.data.get('user_id')
+        
+        try:
+            pollution = Pollutions.objects.get(id=pollution_id)
+            user = User.objects.get(id=user_id)
+            
+            # Сбрасываем статус завершения
+            pollution.is_completed = False
+            pollution.completed_by = None
+            pollution.completion_photo = None
+            pollution.save()
+            
+            return Response({
+                'success': 'Работа отклонена',
+                'user_telegram_id': user.telegram_id,
+                'pollution_id': pollution_id,
+                'pollution_type': pollution.pollution_type.name
+            }, status=status.HTTP_200_OK)
+        except (Pollutions.DoesNotExist, User.DoesNotExist):
+            return Response({'error': 'Объект не найден'}, status=status.HTTP_404_NOT_FOUND)

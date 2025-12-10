@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView, LinkTelegramView, PollutionListCreateView, PollutionTypeListView, PollutionDetailView, AssignPollutionView, UserProfileView, UserAssignedPollutionsView, UnassignPollutionView, CompletePollutionView, NotifyAdminsView
+from .views import RegisterView, LinkTelegramView, PollutionListCreateView, PollutionTypeListView, PollutionDetailView, AssignPollutionView, UserProfileView, UserAssignedPollutionsView, UnassignPollutionView, CompletePollutionView, NotifyAdminsView, ApproveCompletionView, RejectCompletionView
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
@@ -16,4 +16,6 @@ urlpatterns = [
     path('user/profile/', UserProfileView.as_view(), name='user_profile'),
     path('user/assigned-pollutions/', UserAssignedPollutionsView.as_view(), name='user_assigned_pollutions'),
     path('notify-admins/', NotifyAdminsView.as_view(), name='notify_admins'),
+    path('approve-completion/', ApproveCompletionView.as_view(), name='approve_completion'),
+    path('reject-completion/', RejectCompletionView.as_view(), name='reject_completion'),
 ]

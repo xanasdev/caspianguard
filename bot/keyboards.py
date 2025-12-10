@@ -158,3 +158,20 @@ def work_actions_kb(work_id: int) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def admin_review_kb(pollution_id: int, user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Одобрить",
+                    callback_data=f"approve_work:{pollution_id}:{user_id}"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отклонить",
+                    callback_data=f"reject_work:{pollution_id}:{user_id}"
+                )
+            ]
+        ]
+    )

@@ -192,4 +192,18 @@ class ApiClient:
             "has_photo": has_photo
         })
 
+    async def approve_completion(self, pollution_id: int, user_id: int) -> Dict[str, Any]:
+        """Одобрить завершение работы"""
+        return await self._request("POST", "/approve-completion/", json={
+            "pollution_id": pollution_id,
+            "user_id": user_id
+        })
+
+    async def reject_completion(self, pollution_id: int, user_id: int) -> Dict[str, Any]:
+        """Отклонить завершение работы"""
+        return await self._request("POST", "/reject-completion/", json={
+            "pollution_id": pollution_id,
+            "user_id": user_id
+        })
+
 

@@ -499,15 +499,8 @@ async def cb_complete_work(callback: CallbackQuery, state: FSMContext) -> None:
     
     await state.update_data(completing_work_id=pollution_id)
     await callback.message.answer(
-        "📷 Отправьте фото завершенной работы или нажмите 'Пропустить' для завершения без фото:",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="➡️ Пропустить")],
-                [KeyboardButton(text="❌ Отмена")]
-            ],
-            resize_keyboard=True,
-            one_time_keyboard=True
-        )
+        "📷 Отправьте фото завершенной работы (обязательно):",
+        reply_markup=cancel_kb()
     )
 
 
@@ -527,6 +520,7 @@ async def handle_completion_photo(message: Message, state: FSMContext) -> None:
         result = await api_client.complete_pollution(message.from_user.id, pollution_id, photo_bytes.read())
         
         # Уведомляем админов
+        logger.info(f"Получен результат завершения: {result}")
         try:
             admin_data = await api_client.notify_admins(
                 result.get('pollution_id'),
@@ -534,14 +528,38 @@ async def handle_completion_photo(message: Message, state: FSMContext) -> None:
                 result.get('username'),
                 result.get('has_photo', False)
             )
+            logger.info(f"Получены данные админов: {admin_data}")
             
-            for admin_telegram_id in admin_data.get('admin_telegram_ids', []):
+            admin_ids = admin_data.get('admin_telegram_ids', [])
+            message_text = admin_data.get('message')
+            photo_url = admin_data.get('completion_photo_url')
+            logger.info(f"Отправляем сообщение {len(admin_ids)} админам: {message_text}")
+            
+            pollution_id = admin_data.get('pollution_id')
+            user_id = admin_data.get('user_id')
+            
+            for admin_telegram_id in admin_ids:
                 try:
-                    await bot.send_message(admin_telegram_id, admin_data.get('message'))
+                    logger.info(f"Отправляем сообщение админу {admin_telegram_id}")
+                    if photo_url:
+                        full_url = f"https://web-production-190af.up.railway.app{photo_url}"
+                        await bot.send_photo(
+                            admin_telegram_id, 
+                            photo=full_url, 
+                            caption=message_text,
+                            reply_markup=admin_review_kb(pollution_id, user_id)
+                        )
+                    else:
+                        await bot.send_message(
+                            admin_telegram_id, 
+                            message_text,
+                            reply_markup=admin_review_kb(pollution_id, user_id)
+                        )
+                    logger.info(f"Сообщение успешно отправлено админу {admin_telegram_id}")
                 except Exception as send_error:
-                    logger.warning(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
+                    logger.error(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
         except Exception as notify_error:
-            logger.warning(f"Ошибка уведомления админов: {notify_error}")
+            logger.error(f"Ошибка уведомления админов: {notify_error}")
         
         await state.clear()
         await message.answer(
@@ -554,43 +572,67 @@ async def handle_completion_photo(message: Message, state: FSMContext) -> None:
         await message.answer("⚠️ Ошибка завершения работы.", reply_markup=main_menu_kb())
 
 
-@dp.message(F.text == "➡️ Пропустить")
-async def handle_completion_skip(message: Message, state: FSMContext) -> None:
-    data = await state.get_data()
-    pollution_id = data.get('completing_work_id')
-    
-    if not pollution_id:
-        return
+@dp.callback_query(F.data.startswith("approve_work:"))
+async def cb_approve_work(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, pollution_id_str, user_id_str = callback.data.split(":", 2)
+    pollution_id = int(pollution_id_str)
+    user_id = int(user_id_str)
     
     try:
-        result = await api_client.complete_pollution(message.from_user.id, pollution_id)
+        result = await api_client.approve_completion(pollution_id, user_id)
         
-        # Уведомляем админов
-        try:
-            admin_data = await api_client.notify_admins(
-                result.get('pollution_id'),
-                result.get('user_id'),
-                result.get('username'),
-                result.get('has_photo', False)
-            )
-            
-            for admin_telegram_id in admin_data.get('admin_telegram_ids', []):
-                try:
-                    await bot.send_message(admin_telegram_id, admin_data.get('message'))
-                except Exception as send_error:
-                    logger.warning(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
-        except Exception as notify_error:
-            logger.warning(f"Ошибка уведомления админов: {notify_error}")
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.reply("✅ Работа одобрена! Пользователь получил +1 балл.")
         
-        await state.clear()
-        await message.answer(
-            "✅ Заявка на завершение работы отправлена на проверку администрации.",
-            reply_markup=main_menu_kb()
-        )
+        # Уведомляем волонтера
+        user_telegram_id = result.get('user_telegram_id')
+        pollution_type = result.get('pollution_type')
+        if user_telegram_id:
+            try:
+                await bot.send_message(
+                    user_telegram_id,
+                    f"✅ Ваша работа по проблеме #{pollution_id} ({pollution_type}) одобрена!\n\nВам начислен +1 балл. Спасибо за помощь!"
+                )
+            except Exception as notify_error:
+                logger.error(f"Ошибка уведомления волонтера: {notify_error}")
+        
     except Exception as e:
-        logger.exception("Ошибка при завершении работы: %s", e)
-        await state.clear()
-        await message.answer("⚠️ Ошибка завершения работы.", reply_markup=main_menu_kb())
+        logger.exception("Ошибка при одобрении работы: %s", e)
+        await callback.message.reply("⚠️ Ошибка одобрения работы.")
+
+
+@dp.callback_query(F.data.startswith("reject_work:"))
+async def cb_reject_work(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, pollution_id_str, user_id_str = callback.data.split(":", 2)
+    pollution_id = int(pollution_id_str)
+    user_id = int(user_id_str)
+    
+    try:
+        result = await api_client.reject_completion(pollution_id, user_id)
+        
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.reply("❌ Работа отклонена. Балл не начислен.")
+        
+        # Уведомляем волонтера
+        user_telegram_id = result.get('user_telegram_id')
+        pollution_type = result.get('pollution_type')
+        if user_telegram_id:
+            try:
+                await bot.send_message(
+                    user_telegram_id,
+                    f"❌ Ваша работа по проблеме #{pollution_id} ({pollution_type}) отклонена.\n\nПожалуйста, проверьте качество выполненной работы."
+                )
+            except Exception as notify_error:
+                logger.error(f"Ошибка уведомления волонтера: {notify_error}")
+        
+    except Exception as e:
+        logger.exception("Ошибка при отклонении работы: %s", e)
+        await callback.message.reply("⚠️ Ошибка отклонения работы.")
+
+
+
 
 
 async def on_startup() -> None:
