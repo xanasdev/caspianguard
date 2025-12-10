@@ -18,12 +18,15 @@ import aiohttp
 
 from config import bot_config, webhook_config
 from keyboards import *
+from aiogram.fsm.state import State, StatesGroup
 from services_api_client import ApiClient
-from states import ReportProblemState, AdminChatState, LinkTelegramState, AdminReplyState
+from states import ReportProblemState, AdminChatState, LinkTelegramState
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+print("BOT STARTING...")
+logger.info("BOT STARTING...")
 
 
 bot = Bot(
@@ -39,6 +42,7 @@ api_client = ApiClient()
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
+    logger.info(f"Получена команда /start от пользователя {message.from_user.id}")
     await state.clear()
     
     # Проверяем есть ли deep link аргумент
@@ -714,43 +718,53 @@ async def run_webhook() -> None:
         await runner.cleanup()
 
 
-if __name__ == "__main__":
-    if not bot_config.token:
-        raise RuntimeError("BOT_TOKEN не задан в переменных окружения")
-
-    if webhook_config.use_webhook:
-        asyncio.run(run_webhook())
-    else:
-        asyncio.run(run_polling())
-
-
-
-# Состояние для ответа админа
 class AdminReplyState(StatesGroup):
     waiting_for_reply = State()
 
 
-@dp.callback_query(F.data.startswith("admin_reply:"))
-async def cb_admin_reply(callback: CallbackQuery, state: FSMContext) -> None:
-    await callback.answer()
-    _, message_id_str = callback.data.split(":", 1)
-    message_id = int(message_id_str)
+@dp.callback_query()
+async def handle_all_callbacks(callback: CallbackQuery, state: FSMContext) -> None:
+    print(f"CALLBACK RECEIVED: {callback.data}")
+    logger.info(f"CALLBACK RECEIVED: {callback.data}")
     
-    await state.update_data(replying_to_message_id=message_id)
-    await state.set_state(AdminReplyState.waiting_for_reply)
-    await callback.message.answer(
-        "✏️ Напишите ответ пользователю:",
-        reply_markup=cancel_kb()
-    )
+    if callback.data == "test_callback":
+        await callback.answer("Test works!")
+        await callback.message.answer("✅ Тест работает!")
+        return
+    
+    if callback.data and callback.data.startswith("admin_reply:"):
+        await callback.answer("Обрабатываю...")
+        
+        try:
+            _, message_id_str = callback.data.split(":", 1)
+            message_id = int(message_id_str)
+            
+            await state.update_data(replying_to_message_id=message_id)
+            await state.set_state(AdminReplyState.waiting_for_reply)
+            
+            await callback.message.answer(
+                "✏️ Напишите ответ пользователю:",
+                reply_markup=cancel_kb()
+            )
+        except Exception as e:
+            logger.exception(f"Ошибка: {e}")
+            await callback.message.answer("⚠️ Ошибка.")
+        return
+    
+    # Остальные callback
+    await callback.answer()
 
 
 @dp.message(AdminReplyState.waiting_for_reply)
 async def handle_admin_reply(message: Message, state: FSMContext) -> None:
+    logger.info(f"Получен ответ админа: {message.text}")
+    
     data = await state.get_data()
     message_id = data.get('replying_to_message_id')
     
     if not message_id:
         await state.clear()
+        await message.answer("⚠️ Ошибка: не найден ID сообщения.")
         return
     
     try:
@@ -767,11 +781,21 @@ async def handle_admin_reply(message: Message, state: FSMContext) -> None:
                 )
                 await message.answer(f"✅ Ответ отправлен пользователю {user_name}")
             except Exception as send_error:
-                logger.error(f"Ошибка отправки ответа пользователю: {send_error}")
-                await message.answer("⚠️ Ошибка отправки ответа пользователю.")
+                logger.error(f"Ошибка отправки: {send_error}")
+                await message.answer("⚠️ Ошибка отправки.")
         
         await state.clear()
     except Exception as e:
-        logger.exception("Ошибка при отправке ответа: %s", e)
+        logger.exception("Ошибка: %s", e)
         await state.clear()
-        await message.answer("⚠️ Ошибка отправки ответа.")
+        await message.answer("⚠️ Ошибка.")
+
+
+if __name__ == "__main__":
+    if not bot_config.token:
+        raise RuntimeError("BOT_TOKEN не задан в переменных окружения")
+
+    if webhook_config.use_webhook:
+        asyncio.run(run_webhook())
+    else:
+        asyncio.run(run_polling())
