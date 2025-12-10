@@ -69,6 +69,30 @@ class LinkTelegramView(APIView):
             logger.error(f"Ошибка при сохранении telegram_id: {e}")
             return Response({'error': f'Ошибка при привязке: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Отправляем уведомление в бот
+        try:
+            import aiohttp
+            import asyncio
+            
+            async def send_notification():
+                async with aiohttp.ClientSession() as session:
+                    await session.post(
+                        'https://caspian-guard-bot-production.up.railway.app/registration-notification',
+                        json={'telegram_id': int(telegram_id)}
+                    )
+            
+            # Запускаем в новом event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            loop.run_until_complete(send_notification())
+            
+        except Exception as notify_error:
+            logger.error(f"Ошибка отправки уведомления: {notify_error}")
+
         return Response({
             'success': 'Telegram аккаунт успешно привязан',
             'message': '✅ Ваш аккаунт успешно привязан! Теперь вы можете пользоваться всеми функциями бота.',
