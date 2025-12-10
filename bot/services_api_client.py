@@ -73,10 +73,6 @@ class ApiClient:
                 if resp.content_type and "application/json" in resp.content_type:
                     return await resp.json()
                 return await resp.text()
-                
-                if resp.content_type and "application/json" in resp.content_type:
-                    return await resp.json()
-                return await resp.text()
 
     async def register_user(self, username: str, password: str | None = None, telegram_id: int | None = None) -> Dict[str, Any]:
         payload: Dict[str, Any] = {

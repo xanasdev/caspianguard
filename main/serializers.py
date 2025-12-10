@@ -19,12 +19,20 @@ class PollutionTypeSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'first_name', 'last_name', 'telegram_id']
+        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'telegram_id']
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError("Пароли не совпадают")
+        return attrs
 
     def create(self, validated_data):
+        validated_data.pop('password2')
         user = User.objects.create_user(**validated_data)
         return user
 
