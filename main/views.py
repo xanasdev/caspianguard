@@ -56,6 +56,12 @@ class LinkTelegramView(APIView):
             return Response({'error': 'Неверный логин или пароль'}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            # Удаляем telegram_id у других пользователей
+            User.objects.filter(telegram_id=int(telegram_id)).update(telegram_id=None)
+            
             user.telegram_id = int(telegram_id)
             user.save()
             logger.info(f"Успешно привязан telegram_id {telegram_id} к пользователю {username}")
@@ -63,7 +69,10 @@ class LinkTelegramView(APIView):
             logger.error(f"Ошибка при сохранении telegram_id: {e}")
             return Response({'error': f'Ошибка при привязке: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'success': 'Telegram аккаунт успешно привязан'}, status=status.HTTP_200_OK)
+        return Response({
+            'success': 'Telegram аккаунт успешно привязан',
+            'message': '✅ Ваш аккаунт успешно привязан! Теперь вы можете пользоваться всеми функциями бота.'
+        }, status=status.HTTP_200_OK)
 
 
 class PollutionPagination(PageNumberPagination):
