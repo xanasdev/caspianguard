@@ -1,0 +1,109 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: hsl(var(--background));
+}
+
+.header {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 400px;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pointCard {
+  padding: 1rem;
+}
+
+.pointHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.pointContent {
+  flex: 1;
+}
+
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pointDescription {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.pointMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+}
+
+.emptyText {
+  color: hsl(var(--muted-foreground));
+}
+
+.accessDenied {
+  padding: 2rem;
+  text-align: center;
+}
+
+.accessTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}

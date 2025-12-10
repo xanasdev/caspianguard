@@ -1,4 +1,4 @@
-.PHONY: help install-backend install-bot run-backend run-bot clean-backend clean-bot install run clean migrate-backend createsuperuser fake-pollutions db-up db-down db-restart db-logs db-reset
+.PHONY: help install-backend install-bot install-frontend run-backend run-bot run-frontend clean-backend clean-bot clean-frontend install run clean migrate-backend createsuperuser fake-pollutions db-up db-down db-restart db-logs db-reset
 
 # Определение Python команды и путей (поддержка разных систем)
 PYTHON := python3
@@ -21,15 +21,18 @@ help: ## Показать справку по командам
 	@echo "Доступные команды:"
 	@echo "  make install-backend  - Установить виртуальное окружение и зависимости для бекенда"
 	@echo "  make install-bot      - Установить виртуальное окружение и зависимости для бота"
-	@echo "  make install          - Установить оба окружения"
+	@echo "  make install-frontend - Установить зависимости для фронтенда (npm)"
+	@echo "  make install          - Установить все окружения (бекенд, бот, фронтенд)"
 	@echo "  make migrate-backend  - Выполнить миграции базы данных (требует запущенной БД)"
 	@echo "  make createsuperuser  - Создать суперпользователя Django (для доступа к админке)"
 	@echo "  make fake-pollutions  - Создать тестовые данные загрязнений (13 записей)"
 	@echo "  make run-backend      - Запустить Django сервер"
 	@echo "  make run-bot          - Запустить Telegram бота"
+	@echo "  make run-frontend     - Запустить Next.js dev сервер"
 	@echo "  make clean-backend    - Удалить виртуальное окружение бекенда"
 	@echo "  make clean-bot        - Удалить виртуальное окружение бота"
-	@echo "  make clean            - Удалить все виртуальные окружения"
+	@echo "  make clean-frontend   - Удалить node_modules фронтенда"
+	@echo "  make clean            - Удалить все окружения"
 	@echo ""
 	@echo "Команды для базы данных (Docker Compose):"
 	@echo "  make db-up            - Запустить PostgreSQL в Docker"
@@ -63,7 +66,13 @@ endif
 	@$(VENV_BOT)/$(VENV_BIN)/pip install -r bot/req.txt
 	@echo "Бот готов к запуску!"
 
-install: install-backend install-bot ## Установить оба окружения
+install-frontend: ## Установить зависимости для фронтенда
+	@echo "Установка зависимостей фронтенда..."
+	@cd frontend && npm install --legacy-peer-deps
+	@echo "Фронтенд готов к запуску!"
+	@echo "Примечание: Убедитесь, что файл frontend/.env настроен правильно"
+
+install: install-backend install-bot install-frontend ## Установить все окружения
 
 migrate-backend: ## Выполнить миграции базы данных
 ifeq ($(OS),Windows_NT)
@@ -110,6 +119,10 @@ endif
 	@echo "Запуск Telegram бота..."
 	@$(VENV_BOT)/$(VENV_BIN)/python bot/main.py
 
+run-frontend: ## Запустить Next.js dev сервер
+	@echo "Запуск Next.js сервера..."
+	@cd frontend && npm run dev
+
 clean-backend: ## Удалить виртуальное окружение бекенда
 	@echo "Удаление виртуального окружения бекенда..."
 ifeq ($(OS),Windows_NT)
@@ -128,7 +141,18 @@ else
 endif
 	@echo "Виртуальное окружение бота удалено"
 
-clean: clean-backend clean-bot ## Удалить все виртуальные окружения
+clean-frontend: ## Удалить node_modules фронтенда
+	@echo "Удаление node_modules фронтенда..."
+ifeq ($(OS),Windows_NT)
+	@if exist "frontend\node_modules" rmdir /s /q "frontend\node_modules"
+	@if exist "frontend\.next" rmdir /s /q "frontend\.next"
+else
+	@$(RM) frontend/node_modules
+	@$(RM) frontend/.next
+endif
+	@echo "node_modules фронтенда удалены"
+
+clean: clean-backend clean-bot clean-frontend ## Удалить все окружения
 
 db-up: ## Запустить PostgreSQL в Docker
 	@echo "Запуск PostgreSQL..."

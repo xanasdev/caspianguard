@@ -30,14 +30,22 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class PollutionSerializer(serializers.ModelSerializer):
-    pollution_type = serializers.SlugRelatedField(slug_field='name', queryset=PollutionType.objects.all())
-    image = serializers.ImageField(write_only=True, required=False)
+    # For reading - return object with id and name
+    pollution_type = PollutionTypeSerializer(read_only=True)
+    # For writing - accept name string
+    pollution_type_name = serializers.SlugRelatedField(
+        slug_field='name', 
+        queryset=PollutionType.objects.all(),
+        write_only=True,
+        source='pollution_type'
+    )
+    image = serializers.ImageField(write_only=True, required=True)
     image_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Pollutions
-        fields = ['id', 'latitude', 'longitude', 'description', 'pollution_type', 'created_at', 'reported_by', 'is_approved', 'image', 'image_url', 'phone_number']
-        read_only_fields = ['id', 'created_at', 'reported_by', 'is_approved', 'image_url']
+        fields = ['id', 'latitude', 'longitude', 'description', 'pollution_type', 'pollution_type_name', 'created_at', 'reported_by', 'is_approved', 'image', 'image_url', 'phone_number']
+        read_only_fields = ['id', 'created_at', 'reported_by', 'is_approved', 'image_url', 'pollution_type']
 
     def get_image_url(self, obj):
         if obj.images and obj.images.image:

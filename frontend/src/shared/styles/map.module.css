@@ -1,0 +1,31 @@
+.mapWrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.mapWrapper > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapOverlay {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.mapOverlay > * {
+  pointer-events: auto;
+}
+
+.mapOverlayTop {
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+}
+
+.mapOverlayBottom {
+  bottom: 1rem;
+  right: 1rem;
+}

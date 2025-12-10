@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -66,7 +67,7 @@ class PollutionPagination(PageNumberPagination):
 class PollutionListCreateView(generics.ListCreateAPIView):
     queryset = Pollutions.objects.all().order_by('-created_at')
     serializer_class = PollutionSerializer
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     pagination_class = PollutionPagination
 
     def get_permissions(self):
@@ -88,7 +89,7 @@ class PollutionDetailView(generics.RetrieveAPIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AssignPollutionView(APIView):
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     permission_classes = [CanAssignPollution]
 
     def post(self, request, pk):
@@ -102,7 +103,7 @@ class AssignPollutionView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UserProfileView(APIView):
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -128,7 +129,7 @@ class UserPollutionsPagination(PageNumberPagination):
 @method_decorator(csrf_exempt, name='dispatch')
 class UserAssignedPollutionsView(generics.ListAPIView):
     serializer_class = PollutionSerializer
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = UserPollutionsPagination
 
@@ -138,7 +139,7 @@ class UserAssignedPollutionsView(generics.ListAPIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UnassignPollutionView(APIView):
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
@@ -154,7 +155,7 @@ class UnassignPollutionView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CompletePollutionView(APIView):
-    authentication_classes = [TelegramAuthentication]
+    authentication_classes = [JWTAuthentication, TelegramAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):

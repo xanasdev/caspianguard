@@ -1,0 +1,200 @@
+{
+	"app": {
+		"title": "Caspian Clean Map",
+		"description": "Interactive pollution tracking platform for the Caspian Sea coastal region",
+		"tagline": "Monitoring pollution along the Caspian coast"
+	},
+	"nav": {
+		"map": "Map",
+		"dashboard": "Dashboard",
+		"profile": "Profile",
+		"admin": "Admin panel",
+		"login": "Sign in",
+		"register": "Sign up",
+		"logout": "Log out"
+	},
+	"auth": {
+		"email": "Email",
+		"password": "Password",
+		"confirmPassword": "Confirm password",
+		"firstName": "First name",
+		"lastName": "Last name",
+		"phone": "Phone",
+		"remember": "Remember me",
+		"forgot": "Forgot password?",
+		"loginButton": "Sign in",
+		"registerButton": "Sign up",
+		"noAccount": "Don't have an account?",
+		"haveAccount": "Already have an account?",
+		"logout": "Log out"
+	},
+	"common": {
+		"loading": "Loading...",
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"edit": "Edit",
+		"close": "Close",
+		"back": "Back",
+		"apply": "Apply",
+		"clear": "Clear",
+		"actions": "Actions",
+		"status": "Status"
+	},
+	"status": {
+		"reported": "Reported",
+		"inProgress": "In progress",
+		"cleaned": "Cleaned",
+		"verified": "Verified"
+	},
+	"filter": {
+		"title": "Filters",
+		"active": "Active filters",
+		"status": "Filter by status",
+		"statusDescription": "Show pollution points by their current status",
+		"type": "Filter by type",
+		"typeDescription": "Show pollution points by type of contamination",
+		"search": "Search by name",
+		"reset": "Clear all",
+		"allStatuses": "All statuses",
+		"allTypes": "All types"
+	},
+	"report": {
+		"createTitle": "Report pollution",
+		"editTitle": "Edit pollution report",
+		"description": "Describe what you see and attach photos",
+		"type": "Pollution type",
+		"typePlaceholder": "Select type",
+		"severity": "Severity",
+		"location": "Location",
+		"lat": "Lat",
+		"lng": "Lng",
+		"photos": "Photos",
+		"photosSelected": "{count} file(s) selected",
+		"region": "Region (optional)",
+		"regionPlaceholder": "e.g., Aktau, Makhachkala",
+		"descriptionPlaceholder": "Describe the pollution...",
+		"submit": "Submit report",
+		"update": "Update report",
+		"delete": "Delete point",
+		"submitting": "Submitting..."
+	},
+	"dashboard": {
+		"title": "Dashboard",
+		"subtitle": "Analytics and progress",
+		"stats": {
+			"total": "Total cases",
+			"reported": "Reported",
+			"inProgress": "In progress",
+			"cleaned": "Cleaned",
+			"verified": "Verified"
+		},
+		"nearby": {
+			"title": "Nearby points",
+			"empty": "No nearby reports"
+		},
+		"tabs": {
+			"empty": "No points found"
+		},
+		"accessDenied": {
+			"title": "Access denied",
+			"description": "This page is available only for activists or administrators."
+		},
+		"export": "Export report"
+	},
+	"account": {
+		"title": "Profile",
+		"details": "Personal information",
+		"security": "Security",
+		"notifications": "Notifications",
+		"roles": "Roles",
+		"users": "Users",
+		"noRoles": "No roles yet",
+		"noUsers": "No users found"
+	},
+	"admin": {
+		"title": "Admin panel",
+		"roles": {
+			"title": "Roles",
+			"description": "Create and manage access roles",
+			"create": "Create role",
+			"name": "Role name",
+			"descriptionInput": "Description",
+			"permissions": "Permissions",
+			"empty": "No roles created yet"
+		},
+		"users": {
+			"title": "Users",
+			"description": "Assign roles and manage access",
+			"empty": "No users found"
+		}
+	},
+	"theme": {
+		"toggle": "Toggle theme",
+		"light": "Light",
+		"dark": "Dark",
+		"system": "System"
+	},
+	"map": {
+		"openReport": "Report pollution",
+		"openFilters": "Open filters",
+		"details": "Details",
+		"assignedTo": "Assigned to",
+		"createdBy": "Reported by"
+	},
+	"pollutionType": {
+		"trash": "Trash",
+		"oil_spill": "Oil spill",
+		"industrial_waste": "Industrial waste",
+		"sewage": "Sewage",
+		"plastic": "Plastic",
+		"other": "Other"
+	},
+	"home": {
+		"sidebar": {
+			"total": "Total",
+			"active": "Active",
+			"inProgress": "In progress",
+			"cleaned": "Cleaned",
+			"report": "Report",
+			"filters": "Filters",
+			"listTitle": "Pollution points",
+			"empty": "No pollution points",
+			"reportedOn": "Reported on"
+		},
+		"nearby": {
+			"title": "Nearby pollution",
+			"empty": "No pollution nearby",
+			"emptyHint": "Try increasing the search radius",
+			"coordinates": "Your location",
+			"distance": "Distance",
+			"distanceSuffix": "{{distance}} away",
+			"risk": {
+				"high": "High risk",
+				"medium": "Medium risk",
+				"low": "Low risk"
+			},
+			"cleanArea": "Your area is clean! 🌊",
+			"close": "Close"
+		},
+		"details": {
+			"type": "Pollution type",
+			"status": "Status",
+			"photos": "{count} photos",
+			"viewGallery": "Open gallery to view all",
+			"drawerTitle": "Pollution details",
+			"drawerDescription": "Information about the selected pollution point",
+			"actionsTitle": "Actions",
+			"setInProgress": "Mark as in progress",
+			"markCleaned": "Mark as cleaned",
+			"delete": "Delete point",
+			"reportedBy": "Reported by",
+			"reportedByUnknown": "Unknown",
+			"createdAt": "Reported at",
+			"region": "Region",
+			"regionUnknown": "Not specified",
+			"coordinates": "Coordinates",
+			"descriptionTitle": "Description"
+		}
+	}
+}
