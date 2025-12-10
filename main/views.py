@@ -252,13 +252,15 @@ class ApproveCompletionView(APIView):
             return Response({
                 'success': 'Работа одобрена',
                 'user_telegram_id': user.telegram_id,
-                'pollution_type': pollution.pollution_type
+                'pollution_type': pollution.pollution_type.name
             }, status=status.HTTP_200_OK)
             
         except Pollutions.DoesNotExist:
             return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
         except User.DoesNotExist:
             return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -288,57 +290,12 @@ class RejectCompletionView(APIView):
             return Response({
                 'success': 'Работа отклонена',
                 'user_telegram_id': user.telegram_id,
-                'pollution_type': pollution.pollution_type
+                'pollution_type': pollution.pollution_type.name
             }, status=status.HTTP_200_OK)
             
         except Pollutions.DoesNotExist:
             return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
         except User.DoesNotExist:
             return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
-        pollution_id = request.data.get('pollution_id')
-        user_id = request.data.get('user_id')
-        
-        try:
-            pollution = Pollutions.objects.get(id=pollution_id)
-            user = User.objects.get(id=user_id)
-            
-            # Увеличиваем счетчик завершенных работ
-            user.completed_count += 1
-            user.save()
-            
-            return Response({
-                'success': 'Работа одобрена',
-                'user_telegram_id': user.telegram_id,
-                'pollution_id': pollution_id,
-                'pollution_type': pollution.pollution_type.name
-            }, status=status.HTTP_200_OK)
-        except (Pollutions.DoesNotExist, User.DoesNotExist):
-            return Response({'error': 'Объект не найден'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RejectCompletionView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        pollution_id = request.data.get('pollution_id')
-        user_id = request.data.get('user_id')
-        
-        try:
-            pollution = Pollutions.objects.get(id=pollution_id)
-            user = User.objects.get(id=user_id)
-            
-            # Сбрасываем статус завершения
-            pollution.is_completed = False
-            pollution.completed_by = None
-            pollution.completion_photo = None
-            pollution.save()
-            
-            return Response({
-                'success': 'Работа отклонена',
-                'user_telegram_id': user.telegram_id,
-                'pollution_id': pollution_id,
-                'pollution_type': pollution.pollution_type.name
-            }, status=status.HTTP_200_OK)
-        except (Pollutions.DoesNotExist, User.DoesNotExist):
-            return Response({'error': 'Объект не найден'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': f'Ошибка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
