@@ -183,4 +183,13 @@ class ApiClient:
         else:
             return await self._request("POST", f"/pollutions/{pollution_id}/complete/", json={"telegram_id": telegram_id})
 
+    async def notify_admins(self, pollution_id: int, user_id: int, username: str, has_photo: bool) -> Dict[str, Any]:
+        """Уведомить админов о завершении работы"""
+        return await self._request("POST", "/notify-admins/", json={
+            "pollution_id": pollution_id,
+            "user_id": user_id,
+            "username": username,
+            "has_photo": has_photo
+        })
+
 

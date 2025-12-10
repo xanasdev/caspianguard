@@ -173,7 +173,37 @@ class CompletePollutionView(APIView):
             
             return Response({
                 'success': 'Заявка на завершение отправлена',
-                'has_photo': bool(completion_photo)
+                'has_photo': bool(completion_photo),
+                'pollution_id': pollution.id,
+                'user_id': request.user.id,
+                'username': request.user.username
             }, status=status.HTTP_200_OK)
         except Pollutions.DoesNotExist:
             return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class NotifyAdminsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        pollution_id = request.data.get('pollution_id')
+        user_id = request.data.get('user_id')
+        username = request.data.get('username')
+        has_photo = request.data.get('has_photo', False)
+        
+        from django.contrib.auth import get_user_model
+        from django.db import models
+        User = get_user_model()
+        
+        admin_users = User.objects.filter(
+            models.Q(is_superuser=True) |
+            models.Q(position__name__in=['Менеджер', 'Админ'])
+        ).exclude(telegram_id__isnull=True)
+        
+        telegram_ids = [user.telegram_id for user in admin_users if user.telegram_id]
+        
+        return Response({
+            'admin_telegram_ids': telegram_ids,
+            'message': f"📝 Новая заявка на завершение!\n\n👤 Пользователь: {username}\n📌 Проблема: #{pollution_id}\n📷 Фото: {'Есть' if has_photo else 'Нет'}"
+        }, status=status.HTTP_200_OK)

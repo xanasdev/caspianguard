@@ -526,6 +526,23 @@ async def handle_completion_photo(message: Message, state: FSMContext) -> None:
         
         result = await api_client.complete_pollution(message.from_user.id, pollution_id, photo_bytes.read())
         
+        # Уведомляем админов
+        try:
+            admin_data = await api_client.notify_admins(
+                result.get('pollution_id'),
+                result.get('user_id'),
+                result.get('username'),
+                result.get('has_photo', False)
+            )
+            
+            for admin_telegram_id in admin_data.get('admin_telegram_ids', []):
+                try:
+                    await bot.send_message(admin_telegram_id, admin_data.get('message'))
+                except Exception as send_error:
+                    logger.warning(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
+        except Exception as notify_error:
+            logger.warning(f"Ошибка уведомления админов: {notify_error}")
+        
         await state.clear()
         await message.answer(
             "✅ Заявка на завершение работы отправлена на проверку администрации.",
@@ -547,6 +564,23 @@ async def handle_completion_skip(message: Message, state: FSMContext) -> None:
     
     try:
         result = await api_client.complete_pollution(message.from_user.id, pollution_id)
+        
+        # Уведомляем админов
+        try:
+            admin_data = await api_client.notify_admins(
+                result.get('pollution_id'),
+                result.get('user_id'),
+                result.get('username'),
+                result.get('has_photo', False)
+            )
+            
+            for admin_telegram_id in admin_data.get('admin_telegram_ids', []):
+                try:
+                    await bot.send_message(admin_telegram_id, admin_data.get('message'))
+                except Exception as send_error:
+                    logger.warning(f"Ошибка отправки админу {admin_telegram_id}: {send_error}")
+        except Exception as notify_error:
+            logger.warning(f"Ошибка уведомления админов: {notify_error}")
         
         await state.clear()
         await message.answer(
