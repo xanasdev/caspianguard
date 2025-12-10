@@ -12,6 +12,9 @@ from .serializers import RegisterSerializer, PollutionSerializer, PollutionTypeS
 from .models import Pollutions, PollutionType
 from .permissions import *
 from .authentication import TelegramAuthentication
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -43,6 +46,8 @@ class LinkTelegramView(APIView):
         password = request.data.get('password')
         telegram_id = request.data.get('telegram_id')
 
+        logger.info(f"LinkTelegram: username={username}, telegram_id={telegram_id}, type={type(telegram_id)}")
+
         if not username or not password or not telegram_id:
             return Response({'error': 'Необходимо указать username, password и telegram_id'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -51,10 +56,41 @@ class LinkTelegramView(APIView):
         if user is None:
             return Response({'error': 'Неверный логин или пароль'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user.telegram_id = telegram_id
-        user.save()
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            # Удаляем telegram_id у других пользователей
+            User.objects.filter(telegram_id=int(telegram_id)).update(telegram_id=None)
+            
+            user.telegram_id = int(telegram_id)
+            user.save()
+            logger.info(f"Успешно привязан telegram_id {telegram_id} к пользователю {username}")
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении telegram_id: {e}")
+            return Response({'error': f'Ошибка при привязке: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'success': 'Telegram аккаунт успешно привязан'}, status=status.HTTP_200_OK)
+        return Response({
+            'success': 'Telegram аккаунт успешно привязан',
+            'message': '✅ Ваш аккаунт успешно привязан! Теперь вы можете пользоваться всеми функциями бота.'
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SendRegistrationNotificationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        telegram_id = request.data.get('telegram_id')
+        
+        if not telegram_id:
+            return Response({'error': 'Необходимо указать telegram_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': 'Уведомление отправлено',
+            'telegram_id': telegram_id,
+            'message': '✅ Регистрация завершена! Ваш аккаунт успешно привязан к Telegram. Теперь вы можете пользоваться всеми функциями бота!'
+        }, status=status.HTTP_200_OK)
 
 
 class PollutionPagination(PageNumberPagination):

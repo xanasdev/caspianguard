@@ -22,9 +22,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'first_name', 'last_name', 'telegram_id']
+        fields = ['username', 'password', 'first_name', 'last_name']
 
     def create(self, validated_data):
+        # Добавляем пустой email если не указан
+        if 'email' not in validated_data:
+            validated_data['email'] = ''
         user = User.objects.create_user(**validated_data)
         return user
 

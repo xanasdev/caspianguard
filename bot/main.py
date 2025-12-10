@@ -93,6 +93,19 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         "Выберите нужный пункт в меню ниже."
     )
     await message.answer(text, reply_markup=main_menu_kb())
+    
+    # Кнопка регистрации
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+    register_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📝 Регистрация", 
+            web_app=WebAppInfo(url="https://caspianguard.vercel.app/register.html")
+        )]
+    ])
+    await message.answer(
+        "🔗 Для полного доступа к функциям бота необходимо зарегистрироваться и привязать свой Telegram аккаунт. Нажмите кнопку ниже:",
+        reply_markup=register_kb
+    )
 
 
 @dp.message(F.text == "❌ Отмена")
@@ -694,9 +707,36 @@ async def run_polling() -> None:
     await dp.start_polling(bot)
 
 
+async def handle_registration_notification(request):
+    """Обработчик уведомлений о регистрации"""
+    try:
+        data = await request.json()
+        telegram_id = data.get('telegram_id')
+        
+        if telegram_id:
+            try:
+                notification_data = await api_client.get_registration_notification(telegram_id)
+                message = notification_data.get('message', '✅ Регистрация завершена! Ваш аккаунт успешно привязан к Telegram.')
+                
+                await bot.send_message(
+                    telegram_id,
+                    message
+                )
+                return web.json_response({'success': True})
+            except Exception as e:
+                logger.error(f"Ошибка отправки уведомления: {e}")
+                return web.json_response({'error': str(e)}, status=500)
+        
+        return web.json_response({'error': 'telegram_id не указан'}, status=400)
+    except Exception as e:
+        logger.error(f"Ошибка обработки уведомления: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
 async def run_webhook() -> None:
     app = web.Application()
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+    app.router.add_post('/registration-notification', handle_registration_notification)
     setup_application(app, dp, bot=bot)
     app.on_startup.append(lambda _: on_startup())
     app.on_shutdown.append(lambda _: on_shutdown())

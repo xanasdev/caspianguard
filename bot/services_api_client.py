@@ -73,10 +73,6 @@ class ApiClient:
                 if resp.content_type and "application/json" in resp.content_type:
                     return await resp.json()
                 return await resp.text()
-                
-                if resp.content_type and "application/json" in resp.content_type:
-                    return await resp.json()
-                return await resp.text()
 
     async def register_user(self, username: str, password: str | None = None, telegram_id: int | None = None) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -227,4 +223,10 @@ class ApiClient:
         return await self._request("POST", "/reply-to-user/", json={
             "message_id": message_id,
             "reply_message": reply_message
+        })
+
+    async def get_registration_notification(self, telegram_id: int) -> Dict[str, Any]:
+        """Получить уведомление о регистрации"""
+        return await self._request("POST", "/send-registration-notification/", json={
+            "telegram_id": telegram_id
         })
