@@ -19,6 +19,7 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     position = models.ForeignKey(Position, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    completed_count = models.IntegerField(default=0, verbose_name='Количество завершенных работ')
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -58,6 +59,9 @@ class Pollutions(models.Model):
     images = models.ForeignKey(PollutionImage, related_name='pollutions', verbose_name='Изображения', on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20, verbose_name='Номер телефона автора', null=True, blank=True)
     assigned_to = models.ManyToManyField(User, related_name='assigned_pollutions', verbose_name='Взято в работу', blank=True)
+    is_completed = models.BooleanField(default=False, verbose_name='Завершено')
+    completion_photo = models.ImageField(upload_to='completion_photos/', null=True, blank=True, verbose_name='Фото завершения')
+    completed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='completed_pollutions', verbose_name='Завершил')
 
     class Meta:
         verbose_name = 'Сообщение о загрязнении'

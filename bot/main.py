@@ -91,36 +91,6 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await message.answer(text, reply_markup=main_menu_kb())
 
 
-@dp.message(F.web_app_data)
-async def handle_web_app_data(message: Message) -> None:
-    import json
-    try:
-        logger.info(f"Received web_app_data: {message.web_app_data.data}")
-        data = json.loads(message.web_app_data.data)
-        logger.info(f"Parsed data: {data}")
-        
-        if data.get('action') == 'take_pollution':
-            pollution_id = data.get('pollution_id')
-            logger.info(f"Taking pollution {pollution_id} for user {message.from_user.id}")
-            
-            problem = await api_client.get_pollution_detail(pollution_id)
-            await api_client.take_problem(message.from_user.id, pollution_id)
-            
-            pollution_type = problem.get('pollution_type', 'Неизвестно')
-            latitude = problem.get('latitude', 0)
-            longitude = problem.get('longitude', 0)
-            
-            await message.answer(
-                f"✅ Вы успешно взяли в работу проблему #{pollution_id} - {pollution_type}. Спасибо за помощь!",
-                reply_markup=main_menu_kb()
-            )
-            
-            if latitude and longitude:
-                await message.answer_location(latitude=float(latitude), longitude=float(longitude))
-    except Exception as e:
-        logger.exception("Ошибка обработки Web App данных: %s", e)
-        await message.answer("⚠️ Не удалось взять проблему в работу.", reply_markup=main_menu_kb())
-
 @dp.message(F.text == "❌ Отмена")
 async def cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
@@ -183,7 +153,7 @@ async def report_phone(message: Message, state: FSMContext) -> None:
         phone = message.contact.phone_number
     elif message.text:
         phone_raw = message.text.strip()
-        phone = None if phone_raw.lower() == "пропустить" else phone_raw
+        phone = None if phone_raw.lower() == "➡️ Пропустить" else phone_raw
     else:
         phone = None
 
@@ -360,19 +330,35 @@ async def cb_ann_take(callback: CallbackQuery) -> None:
 
 @dp.message(F.text == "👤 Мой профиль")
 async def user_profile(message: Message) -> None:
-    # Пока авторизация в backend не завязана на бота, показываем
-    # только информацию из Telegram-профиля пользователя.
-    tg_full_name = message.from_user.full_name
-    tg_username = f"@{message.from_user.username}" if message.from_user.username else "—"
-    role = "пользователь (без привязки к аккаунту в системе)"
-
-    text = (
-        f"👤 <b>Профиль пользователя</b>\n\n"
-        f"🧾 <b>Инфо:</b> {tg_full_name}\n"
-        f"🔗 <b>Юзернейм:</b> {tg_username}\n"
-        f"🎭 <b>Роль:</b> {role}\n"
-    )
-    await message.answer(text)
+    try:
+        profile = await api_client.get_user_profile(message.from_user.id)
+        
+        username = profile.get('username', 'Не указан')
+        tg_username = f"@{message.from_user.username}" if message.from_user.username else "—"
+        first_name = profile.get('first_name', '')
+        last_name = profile.get('last_name', '')
+        full_name = f"{first_name} {last_name}".strip() or "Не указано"
+        position = profile.get('position', 'Не указана')
+        completed_count = profile.get('completed_count', 0)
+        
+        text = (
+            f"👤 <b>Мой профиль</b>\n\n"
+            f"👨‍💼 <b>Логин:</b> {username}\n"
+            f"🔗 <b>Telegram:</b> {tg_username}\n"
+            f"📝 <b>Имя:</b> {full_name}\n"
+            f"🎭 <b>Роль:</b> {position}\n"
+            f"✅ <b>Завершено работ:</b> {completed_count}"
+        )
+        
+        await message.answer(text, reply_markup=profile_kb())
+    except aiohttp.ClientResponseError as e:
+        if e.status == 401:
+            await message.answer("⚠️ Необходимо авторизоваться. Используйте '🔗 Привязать аккаунт' для привязки аккаунта.", reply_markup=main_menu_kb())
+        else:
+            await message.answer("⚠️ Ошибка получения профиля.", reply_markup=main_menu_kb())
+    except Exception as e:
+        logger.exception("Ошибка при получении профиля: %s", e)
+        await message.answer("⚠️ Ошибка получения профиля.", reply_markup=main_menu_kb())
 
 
 @dp.message(F.text == "📞 Связь с администрацией")
@@ -417,6 +403,160 @@ async def link_account_finish(message: Message, state: FSMContext) -> None:
     )
     await state.clear()
     await message.answer("Аккаунт успешно привязан", reply_markup=main_menu_kb())
+
+
+@dp.callback_query(F.data.startswith("my_works:"))
+async def cb_my_works(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, page_str = callback.data.split(":", 1)
+    page = int(page_str)
+    
+    try:
+        response = await api_client.get_user_assigned_pollutions(callback.from_user.id, page=page)
+        problems = response.get('results', [])
+        has_next = bool(response.get('next'))
+        
+        if not problems:
+            await callback.message.edit_text("⚠️ У вас нет взятых работ.")
+            return
+        
+        text = f"📋 <b>Мои работы</b> (стр. {page})\n\nВыберите работу:"
+        
+        await callback.message.edit_text(
+            text,
+            reply_markup=my_works_kb(problems, page, has_next)
+        )
+    except aiohttp.ClientResponseError as e:
+        if e.status == 401:
+            await callback.message.edit_text("⚠️ Необходимо авторизоваться.")
+        else:
+            await callback.message.edit_text("⚠️ Ошибка получения списка работ.")
+    except Exception as e:
+        logger.exception("Ошибка при получении списка работ: %s", e)
+        await callback.message.edit_text("⚠️ Ошибка получения списка работ.")
+
+
+@dp.callback_query(F.data.startswith("my_work_view:"))
+async def cb_my_work_view(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, id_str = callback.data.split(":", 1)
+    pollution_id = int(id_str)
+    
+    try:
+        problem = await api_client.get_pollution_detail(pollution_id)
+        
+        if not problem:
+            await callback.message.answer("⚠️ Работа не найдена.")
+            return
+        
+        pollution_type = problem.get('pollution_type', 'Неизвестно')
+        description = problem.get('description', '—') or '—'
+        latitude = problem.get('latitude', 0)
+        longitude = problem.get('longitude', 0)
+        
+        text = (
+            f"📌 <b>Моя работа #{problem.get('id', '?')}</b>\n\n"
+            f"📍 <b>Тип:</b> {pollution_type}\n"
+            f"📝 <b>Описание:</b> {description}\n"
+            f"📍 <b>Координаты:</b> {latitude}, {longitude}"
+        )
+        
+        await callback.message.answer(text, reply_markup=work_actions_kb(problem.get('id', pollution_id)))
+        
+        if latitude and longitude:
+            try:
+                await callback.message.answer_location(
+                    latitude=float(latitude),
+                    longitude=float(longitude)
+                )
+            except Exception as loc_error:
+                logger.warning(f"Ошибка отправки геолокации: {loc_error}")
+        
+    except Exception as e:
+        logger.exception("Ошибка при получении деталей работы: %s", e)
+        await callback.message.answer("⚠️ Ошибка получения деталей работы.")
+
+
+@dp.callback_query(F.data.startswith("cancel_work:"))
+async def cb_cancel_work(callback: CallbackQuery) -> None:
+    await callback.answer()
+    _, id_str = callback.data.split(":", 1)
+    pollution_id = int(id_str)
+    
+    try:
+        await api_client.unassign_pollution(callback.from_user.id, pollution_id)
+        await callback.message.edit_text(f"❌ Вы отменили взятие работы #{pollution_id}.")
+    except Exception as e:
+        logger.exception("Ошибка при отмене работы: %s", e)
+        await callback.message.answer("⚠️ Ошибка отмены работы.")
+
+
+@dp.callback_query(F.data.startswith("complete_work:"))
+async def cb_complete_work(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    _, id_str = callback.data.split(":", 1)
+    pollution_id = int(id_str)
+    
+    await state.update_data(completing_work_id=pollution_id)
+    await callback.message.answer(
+        "📷 Отправьте фото завершенной работы или нажмите 'Пропустить' для завершения без фото:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="➡️ Пропустить")],
+                [KeyboardButton(text="❌ Отмена")]
+            ],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+    )
+
+
+@dp.message(F.photo)
+async def handle_completion_photo(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    pollution_id = data.get('completing_work_id')
+    
+    if not pollution_id:
+        return
+    
+    try:
+        photo = message.photo[-1]
+        file = await bot.get_file(photo.file_id)
+        photo_bytes = await bot.download_file(file.file_path)
+        
+        result = await api_client.complete_pollution(message.from_user.id, pollution_id, photo_bytes.read())
+        
+        await state.clear()
+        await message.answer(
+            "✅ Заявка на завершение работы отправлена на проверку администрации.",
+            reply_markup=main_menu_kb()
+        )
+    except Exception as e:
+        logger.exception("Ошибка при завершении работы: %s", e)
+        await state.clear()
+        await message.answer("⚠️ Ошибка завершения работы.", reply_markup=main_menu_kb())
+
+
+@dp.message(F.text == "➡️ Пропустить")
+async def handle_completion_skip(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    pollution_id = data.get('completing_work_id')
+    
+    if not pollution_id:
+        return
+    
+    try:
+        result = await api_client.complete_pollution(message.from_user.id, pollution_id)
+        
+        await state.clear()
+        await message.answer(
+            "✅ Заявка на завершение работы отправлена на проверку администрации.",
+            reply_markup=main_menu_kb()
+        )
+    except Exception as e:
+        logger.exception("Ошибка при завершении работы: %s", e)
+        await state.clear()
+        await message.answer("⚠️ Ошибка завершения работы.", reply_markup=main_menu_kb())
 
 
 async def on_startup() -> None:

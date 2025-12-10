@@ -98,3 +98,82 @@ class AssignPollutionView(APIView):
             return Response({'success': 'Вы взяли проблему в работу'}, status=status.HTTP_200_OK)
         except Pollutions.DoesNotExist:
             return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserProfileView(APIView):
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        position_name = user.position.name if user.position else 'Не указана'
+        
+        return Response({
+            'username': user.username,
+            'telegram_username': f'@{user.username}' if user.username else 'Не указан',
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'position': position_name,
+            'completed_count': user.completed_count,
+        }, status=status.HTTP_200_OK)
+
+
+class UserPollutionsPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = 'page_size'
+    max_page_size = 10
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserAssignedPollutionsView(generics.ListAPIView):
+    serializer_class = PollutionSerializer
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = UserPollutionsPagination
+
+    def get_queryset(self):
+        return Pollutions.objects.filter(assigned_to=self.request.user, is_completed=False).order_by('-created_at')
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UnassignPollutionView(APIView):
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            pollution = Pollutions.objects.get(pk=pk)
+            if request.user in pollution.assigned_to.all():
+                pollution.assigned_to.remove(request.user)
+                return Response({'success': 'Вы отменили взятие проблемы'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Вы не брали эту проблему'}, status=status.HTTP_400_BAD_REQUEST)
+        except Pollutions.DoesNotExist:
+            return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CompletePollutionView(APIView):
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            pollution = Pollutions.objects.get(pk=pk)
+            if request.user not in pollution.assigned_to.all():
+                return Response({'error': 'Вы не брали эту проблему'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            completion_photo = request.FILES.get('completion_photo')
+            if completion_photo:
+                pollution.completion_photo = completion_photo
+            
+            pollution.is_completed = True
+            pollution.completed_by = request.user
+            pollution.save()
+            
+            return Response({
+                'success': 'Заявка на завершение отправлена',
+                'has_photo': bool(completion_photo)
+            }, status=status.HTTP_200_OK)
+        except Pollutions.DoesNotExist:
+            return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)

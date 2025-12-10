@@ -155,4 +155,32 @@ class ApiClient:
         """Получить детальную информацию об одном загрязнении"""
         return await self._request("GET", f"/pollutions/{pollution_id}/")
 
+    async def get_user_profile(self, telegram_id: int) -> Dict[str, Any]:
+        """Получить профиль пользователя"""
+        return await self._request("GET", "/user/profile/", params={"telegram_id": telegram_id})
+
+    async def get_user_assigned_pollutions(self, telegram_id: int, page: int = 1) -> Dict[str, Any]:
+        """Получить список взятых работ"""
+        return await self._request("GET", "/user/assigned-pollutions/", params={"telegram_id": telegram_id, "page": page})
+
+    async def unassign_pollution(self, telegram_id: int, pollution_id: int) -> Dict[str, Any]:
+        """Отменить взятие проблемы"""
+        return await self._request("POST", f"/pollutions/{pollution_id}/unassign/", json={"telegram_id": telegram_id})
+
+    async def complete_pollution(self, telegram_id: int, pollution_id: int, photo_bytes: bytes | None = None) -> Dict[str, Any]:
+        """Завершить работу"""
+        url = f"{self.base_url}/pollutions/{pollution_id}/complete/"
+        
+        if photo_bytes:
+            data = aiohttp.FormData()
+            data.add_field('telegram_id', str(telegram_id))
+            data.add_field('completion_photo', photo_bytes, filename='completion.jpg', content_type='image/jpeg')
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=data) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
+        else:
+            return await self._request("POST", f"/pollutions/{pollution_id}/complete/", json={"telegram_id": telegram_id})
+
 

@@ -80,15 +80,6 @@ def announcements_list_kb(problems: list, page: int, has_next: bool) -> InlineKe
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def announcements_pagination_kb(page: int, has_next: bool) -> InlineKeyboardMarkup:
-    buttons = []
-    if page > 1:
-        buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"ann_page:{page-1}"))
-    if has_next:
-        buttons.append(InlineKeyboardButton(text="➡️ Далее", callback_data=f"ann_page:{page+1}"))
-    return InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else InlineKeyboardMarkup(inline_keyboard=[])
-
-
 def announcement_actions_kb(announcement_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -111,4 +102,59 @@ def send_number_kb():
         ],
         resize_keyboard=True,
         one_time_keyboard=True
+    )
+
+
+def profile_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📋 Мои работы",
+                    callback_data="my_works:1"
+                )
+            ]
+        ]
+    )
+
+
+def my_works_kb(problems: list, page: int, has_next: bool) -> InlineKeyboardMarkup:
+    buttons = []
+    
+    for problem in problems:
+        problem_id = problem.get('id')
+        pollution_type = problem.get('pollution_type', 'Неизвестно')
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"📌 #{problem_id} - {pollution_type}",
+                callback_data=f"my_work_view:{problem_id}"
+            )
+        ])
+    
+    nav_buttons = []
+    if page > 1:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"my_works:{page-1}"))
+    if has_next:
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Далее", callback_data=f"my_works:{page+1}"))
+    
+    if nav_buttons:
+        buttons.append(nav_buttons)
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def work_actions_kb(work_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Завершить",
+                    callback_data=f"complete_work:{work_id}"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отменить",
+                    callback_data=f"cancel_work:{work_id}"
+                )
+            ]
+        ]
     )
