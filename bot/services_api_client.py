@@ -194,16 +194,24 @@ class ApiClient:
 
     async def approve_completion(self, pollution_id: int, user_id: int) -> Dict[str, Any]:
         """Одобрить завершение работы"""
-        return await self._request("POST", "/approve-completion/", json={
+        import logging
+        logger = logging.getLogger(__name__)
+        payload = {
             "pollution_id": pollution_id,
             "user_id": user_id
-        })
+        }
+        logger.info(f"Отправляем запрос на одобрение: {payload}")
+        return await self._request("POST", "/approve-completion/", json=payload)
 
     async def reject_completion(self, pollution_id: int, user_id: int) -> Dict[str, Any]:
         """Отклонить завершение работы"""
-        return await self._request("POST", "/reject-completion/", json={
+        import logging
+        logger = logging.getLogger(__name__)
+        payload = {
             "pollution_id": pollution_id,
             "user_id": user_id
-        })
+        }
+        logger.info(f"Отправляем запрос на отклонение: {payload}")
+        return await self._request("POST", "/reject-completion/", json=payload)
 
 

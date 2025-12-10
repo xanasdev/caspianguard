@@ -231,6 +231,73 @@ class ApproveCompletionView(APIView):
         pollution_id = request.data.get('pollution_id')
         user_id = request.data.get('user_id')
         
+        if not pollution_id or not user_id:
+            return Response({'error': 'Необходимо указать pollution_id и user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            pollution = Pollutions.objects.get(id=pollution_id)
+            user = User.objects.get(id=user_id)
+            
+            # Одобряем работу
+            pollution.is_approved = True
+            pollution.save()
+            
+            # Увеличиваем счетчик завершенных работ
+            user.completed_count += 1
+            user.save()
+            
+            return Response({
+                'success': 'Работа одобрена',
+                'user_telegram_id': user.telegram_id,
+                'pollution_type': pollution.pollution_type
+            }, status=status.HTTP_200_OK)
+            
+        except Pollutions.DoesNotExist:
+            return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RejectCompletionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        pollution_id = request.data.get('pollution_id')
+        user_id = request.data.get('user_id')
+        
+        if not pollution_id or not user_id:
+            return Response({'error': 'Необходимо указать pollution_id и user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            pollution = Pollutions.objects.get(id=pollution_id)
+            user = User.objects.get(id=user_id)
+            
+            # Отклоняем работу - возвращаем в работу
+            pollution.is_completed = False
+            pollution.is_approved = False
+            pollution.completion_photo = None
+            pollution.save()
+            
+            return Response({
+                'success': 'Работа отклонена',
+                'user_telegram_id': user.telegram_id,
+                'pollution_type': pollution.pollution_type
+            }, status=status.HTTP_200_OK)
+            
+        except Pollutions.DoesNotExist:
+            return Response({'error': 'Проблема не найдена'}, status=status.HTTP_404_NOT_FOUND)
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+        pollution_id = request.data.get('pollution_id')
+        user_id = request.data.get('user_id')
+        
         try:
             pollution = Pollutions.objects.get(id=pollution_id)
             user = User.objects.get(id=user_id)

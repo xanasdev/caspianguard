@@ -580,6 +580,7 @@ async def cb_approve_work(callback: CallbackQuery) -> None:
     user_id = int(user_id_str)
     
     try:
+        logger.info(f"Одобряем работу: pollution_id={pollution_id}, user_id={user_id}")
         result = await api_client.approve_completion(pollution_id, user_id)
         
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -610,6 +611,7 @@ async def cb_reject_work(callback: CallbackQuery) -> None:
     user_id = int(user_id_str)
     
     try:
+        logger.info(f"Отклоняем работу: pollution_id={pollution_id}, user_id={user_id}")
         result = await api_client.reject_completion(pollution_id, user_id)
         
         await callback.message.edit_reply_markup(reply_markup=None)
