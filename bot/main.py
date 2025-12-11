@@ -93,18 +93,9 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         "Выберите нужный пункт в меню ниже."
     )
     await message.answer(text, reply_markup=main_menu_kb())
-    
-    # Кнопка регистрации
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-    register_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="📝 Регистрация", 
-            web_app=WebAppInfo(url="https://caspianguard.vercel.app/register.html")
-        )]
-    ])
     await message.answer(
         "🔗 Для полного доступа к функциям бота необходимо зарегистрироваться и привязать свой Telegram аккаунт. Нажмите кнопку ниже:",
-        reply_markup=register_kb
+        reply_markup=register_kb()
     )
 
 

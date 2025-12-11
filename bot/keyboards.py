@@ -181,3 +181,12 @@ def admin_reply_kb(message_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply:{message_id}")]
     ])
+
+
+def register_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📝 Регистрация", 
+            web_app=WebAppInfo(url="https://caspianguard.vercel.app/register.html")
+        )]
+    ])
