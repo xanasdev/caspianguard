@@ -15,6 +15,13 @@ const statusStyles: Record<PollutionStatus, string> = {
 	[PollutionStatus.VERIFIED]: 'bg-blue-100 text-blue-700 border-blue-200',
 }
 
+const statusTranslationKeys: Record<PollutionStatus, string> = {
+	[PollutionStatus.REPORTED]: 'reported',
+	[PollutionStatus.IN_PROGRESS]: 'inProgress',
+	[PollutionStatus.CLEANED]: 'cleaned',
+	[PollutionStatus.VERIFIED]: 'verified',
+}
+
 interface PointDetailsHeaderProps {
 	marker: Marker
 }
@@ -46,7 +53,7 @@ export const PointDetailsHeader = ({marker}: PointDetailsHeaderProps) => {
 						}`}
 					>
 						<Clock className='h-3 w-3' />
-						{tStatus(marker.status)}
+						{tStatus(statusTranslationKeys[marker.status])}
 					</Badge>
 				)}
 			</div>

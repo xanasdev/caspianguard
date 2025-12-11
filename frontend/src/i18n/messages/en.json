@@ -143,12 +143,11 @@
 		"createdBy": "Reported by"
 	},
 	"pollutionType": {
-		"trash": "Trash",
-		"oil_spill": "Oil spill",
-		"industrial_waste": "Industrial waste",
-		"sewage": "Sewage",
-		"plastic": "Plastic",
-		"other": "Other"
+		"Мусор": "Trash",
+		"Большая мертвая рыба": "Large dead fish",
+		"Большое скопление мусора": "Large trash accumulation",
+		"Нефтяные отходы": "Oil waste",
+		"Химические вещества": "Chemical substances"
 	},
 	"home": {
 		"sidebar": {

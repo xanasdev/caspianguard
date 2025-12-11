@@ -143,12 +143,11 @@
 		"createdBy": "Müəllif"
 	},
 	"pollutionType": {
-		"trash": "Zibil",
-		"oil_spill": "Neft sızması",
-		"industrial_waste": "Sənaye tullantısı",
-		"sewage": "Kanalizasiya",
-		"plastic": "Plastik",
-		"other": "Digər"
+		"Мусор": "Zibil",
+		"Большая мертвая рыба": "Böyük ölü balıq",
+		"Большое скопление мусора": "Böyük zibil yığını",
+		"Нефтяные отходы": "Neft tullantıları",
+		"Химические вещества": "Kimyəvi maddələr"
 	},
 	"home": {
 		"sidebar": {

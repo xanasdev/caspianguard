@@ -1,7 +1,13 @@
 from main.models import PollutionType
 from django.core.management.base import BaseCommand
 
-types = ['Нефтяные отходы', 'Химические вещества', 'Большое скопление мусора', "Большая мертвая рыба"]
+types = [
+    'Мусор',
+    'Большая мертвая рыба',
+    'Большое скопление мусора',
+    'Нефтяные отходы',
+    'Химические вещества',
+]
 
 class Command(BaseCommand):
 

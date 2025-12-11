@@ -13,6 +13,16 @@ const nextConfig: NextConfig = {
 				port: '8000',
 				pathname: '/media/**',
 			},
+			{
+				protocol: 'https',
+				hostname: 'web-production-190af.up.railway.app',
+				pathname: '/media/**',
+			},
+			{
+				protocol: 'http',
+				hostname: 'web-production-190af.up.railway.app',
+				pathname: '/media/**',
+			},
 		],
 		unoptimized: isLocalMedia,
 	},
